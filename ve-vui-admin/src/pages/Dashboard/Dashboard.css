@@ -1,0 +1,52 @@
+/* pages/Dashboard/Dashboard.css */
+.dash-hero {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: var(--sp-6);
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+
+.dash-hero-actions { display: flex; gap: var(--sp-3); flex-shrink: 0; }
+
+/* Charts row */
+.dash-charts {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--sp-5);
+  margin-bottom: var(--sp-5);
+}
+
+.dash-chart-card { }
+.dash-chart-sm   { }
+
+/* Tables row */
+.dash-tables {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-5);
+}
+
+/* Chart tooltip */
+.chart-tooltip {
+  background: var(--gray-900);
+  border: 1px solid var(--gray-700);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  box-shadow: var(--sh-lg);
+}
+
+.ct-label { font-weight: 700; color: var(--white); margin-bottom: 6px; }
+.ct-row { display: flex; gap: 8px; justify-content: space-between; margin-top: 3px; }
+.ct-row strong { color: var(--white); }
+
+@media (max-width: 1200px) {
+  .dash-charts { grid-template-columns: 1fr; }
+  .dash-chart-sm { order: -1; }
+}
+
+@media (max-width: 900px) {
+  .dash-tables { grid-template-columns: 1fr; }
+}
