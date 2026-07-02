@@ -232,9 +232,9 @@ export const paymentApi = {
 
 // ─── NEWS ─────────────────────────────────────────────────────────────────────
 export const newsApi = {
-  getAll: () => request('/api/news'),
+  getAll: () => request('/api/news').then(res => res?.content || res || []),
   getById: (id) => request(`/api/news/${id}`),
-  getBySlug: (slug) => request(`/api/news?slug=${encodeURIComponent(slug)}`),
+  getBySlug: (slug) => request(`/api/news?slug=${encodeURIComponent(slug)}`).then(res => res?.content?.[0] || res || null),
 };
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
