@@ -7,6 +7,11 @@ import {
   getRoute, getBus, getBusType, formatPrice
 } from '../../services/adminData';
 
+const isPenalized = (b) => {
+  if (!b.violationExpiry) return false;
+  return new Date(b.violationExpiry) >= new Date(new Date().toDateString());
+};
+
 const TripsPage = () => {
   const [trips, setTrips]       = useState(initialTrips);
   const [search, setSearch]     = useState('');
@@ -157,7 +162,7 @@ const TripsPage = () => {
                 <div className="a-form-group">
                   <label className="a-label">Xe *</label>
                   <select className="a-input a-select" value={form.busId} onChange={e=>setForm(f=>({...f,busId:e.target.value}))} id="trip-bus">
-                    {buses.filter(b=>b.status==='active').map(b => {
+                    {buses.filter(b => b.status === 'active' && !isPenalized(b)).map(b => {
                       const bt = getBusType(b.typeId);
                       return <option key={b.id} value={b.id}>{b.plateNumber} — {bt?.name}</option>;
                     })}

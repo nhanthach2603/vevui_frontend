@@ -5,7 +5,7 @@ import { FiArrowRight, FiArrowLeft, FiUser, FiPhone, FiMail, FiMapPin } from 're
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useBooking } from '../../context/BookingContext';
-import { pickupPoints, formatPrice } from '../../services/mockData';
+import { tripApi, formatPrice } from '../../services/api';
 import './BookingPage.css';
 
 const BookingPage = () => {
@@ -24,21 +24,47 @@ const BookingPage = () => {
   });
   const [errors, setErrors] = useState({});
 
+  // Pickup / Dropoff points từ API
+  const [pickups, setPickups]   = useState([]);
+  const [dropoffs, setDropoffs] = useState([]);
+  const [loadingPoints, setLoadingPoints] = useState(false);
+
+  const from = selectedTrip?.route?.from || '';
+  const to   = selectedTrip?.route?.to   || '';
+
   useEffect(() => {
     document.title = 'Thông tin đặt vé | Vé Vui';
     if (!selectedTrip || selectedSeats.length === 0) navigate('/');
   }, []);
 
-  const from = selectedTrip?.route?.from || '';
-  const to   = selectedTrip?.route?.to   || '';
-
-  const pickups  = pickupPoints[from]  || [];
-  const dropoffs = pickupPoints[to]    || [];
+  // Load pickup points từ API
+  useEffect(() => {
+    if (!from || !to) return;
+    const loadPoints = async () => {
+      setLoadingPoints(true);
+      try {
+        const [pPickups, pDropoffs] = await Promise.all([
+          tripApi.getPickupPoints(from),
+          tripApi.getPickupPoints(to),
+        ]);
+        setPickups(pPickups || []);
+        setDropoffs(pDropoffs || []);
+      } catch (err) {
+        console.warn('Could not load pickup points:', err);
+        // Giữ mảng rỗng, user vẫn có thể tiếp tục không chọn điểm đón
+        setPickups([]);
+        setDropoffs([]);
+      } finally {
+        setLoadingPoints(false);
+      }
+    };
+    loadPoints();
+  }, [from, to]);
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim())                e.name  = 'Vui lòng nhập họ tên';
-    if (!form.phone.trim() || form.phone.length < 10) e.phone = 'Số điện thoại không hợp lệ';
+    if (!form.name.trim()) e.name = 'Vui lòng nhập họ tên';
+    if (!form.phone.trim() || form.phone.length < 10) e.phone = 'Số điện thoại không hợp lệ (ít nhất 10 số)';
     if (!form.email.trim() || !form.email.includes('@')) e.email = 'Email không hợp lệ';
     return e;
   };
@@ -123,43 +149,53 @@ const BookingPage = () => {
                 {/* Pickup & Dropoff */}
                 <div className="booking-points">
                   <h3 className="booking-section-title"><FiMapPin size={16} /> Điểm đón & Trả khách</h3>
-                  <div className="form-grid">
-                    <div className="form-group">
-                      <label className="form-label">Điểm đón tại {from}</label>
-                      <select
-                        className="form-input form-select"
-                        value={pickupPoint?.id || ''}
-                        onChange={e => {
-                          const p = pickups.find(pp => pp.id === e.target.value);
-                          setPickup(p || null);
-                        }}
-                        id="pickup-point"
-                      >
-                        <option value="">-- Chọn điểm đón --</option>
-                        {pickups.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                  {loadingPoints ? (
+                    <p style={{ color: 'var(--gray-400)', fontSize: '0.9rem', marginBottom: '1rem' }}>⏳ Đang tải điểm đón/trả...</p>
+                  ) : (
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label className="form-label">Điểm đón tại {from}</label>
+                        <select
+                          className="form-input form-select"
+                          value={pickupPoint?.id || ''}
+                          onChange={e => {
+                            const p = pickups.find(pp => String(pp.id) === e.target.value);
+                            setPickup(p || null);
+                          }}
+                          id="pickup-point"
+                        >
+                          <option value="">-- Chọn điểm đón --</option>
+                          {pickups.map(p => (
+                            <option key={p.id} value={String(p.id)}>{p.name}{p.timeOffset ? ` (${p.timeOffset})` : ''}</option>
+                          ))}
+                        </select>
+                        {pickups.length === 0 && (
+                          <span className="input-hint" style={{ color: 'var(--gray-400)' }}>Không có điểm đón riêng — lên xe tại bến</span>
+                        )}
+                      </div>
 
-                    <div className="form-group">
-                      <label className="form-label">Điểm trả tại {to}</label>
-                      <select
-                        className="form-input form-select"
-                        value={dropoffPoint?.id || ''}
-                        onChange={e => {
-                          const p = dropoffs.find(dp => dp.id === e.target.value);
-                          setDropoff(p || null);
-                        }}
-                        id="dropoff-point"
-                      >
-                        <option value="">-- Chọn điểm trả --</option>
-                        {dropoffs.map(p => (
-                          <option key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
+                      <div className="form-group">
+                        <label className="form-label">Điểm trả tại {to}</label>
+                        <select
+                          className="form-input form-select"
+                          value={dropoffPoint?.id || ''}
+                          onChange={e => {
+                            const p = dropoffs.find(dp => String(dp.id) === e.target.value);
+                            setDropoff(p || null);
+                          }}
+                          id="dropoff-point"
+                        >
+                          <option value="">-- Chọn điểm trả --</option>
+                          {dropoffs.map(p => (
+                            <option key={p.id} value={String(p.id)}>{p.name}{p.timeOffset ? ` (${p.timeOffset})` : ''}</option>
+                          ))}
+                        </select>
+                        {dropoffs.length === 0 && (
+                          <span className="input-hint" style={{ color: 'var(--gray-400)' }}>Không có điểm trả riêng — xuống tại bến</span>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
 
                 <div className="booking-note">
@@ -211,7 +247,7 @@ const BookingPage = () => {
                 <div className="bs-details">
                   <div className="bs-row">
                     <span>Ngày đi</span>
-                    <span>{new Date(selectedTrip.date + 'T00:00:00').toLocaleDateString('vi-VN')}</span>
+                    <span>{selectedTrip.date ? new Date(selectedTrip.date + 'T00:00:00').toLocaleDateString('vi-VN') : '—'}</span>
                   </div>
                   <div className="bs-row">
                     <span>Ghế</span>

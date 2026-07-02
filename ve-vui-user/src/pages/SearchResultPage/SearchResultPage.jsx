@@ -1,11 +1,11 @@
 // pages/SearchResultPage/SearchResultPage.jsx
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { FiClock, FiMapPin, FiUsers, FiFilter, FiArrowRight, FiChevronDown } from 'react-icons/fi';
+import { FiClock, FiMapPin, FiUsers, FiFilter, FiArrowRight, FiChevronDown, FiAlertCircle, FiRefreshCw } from 'react-icons/fi';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import SearchBox from '../../components/ui/SearchBox';
-import { searchTrips, formatPrice, formatDuration } from '../../services/mockData';
+import { tripApi, formatPrice, formatDuration } from '../../services/api';
 import { useBooking } from '../../context/BookingContext';
 import './SearchResultPage.css';
 
@@ -123,6 +123,21 @@ const TripCard = ({ trip, onSelect }) => {
   );
 };
 
+// ── Loading skeleton ──
+const TripSkeleton = () => (
+  <div className="trip-card" style={{ animation: 'pulse 1.5s ease-in-out infinite' }}>
+    <div className="trip-card-main">
+      <div style={{ flex: 1, display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        <div style={{ width: 60, height: 40, background: 'var(--gray-100)', borderRadius: 8 }} />
+        <div style={{ flex: 1, height: 2, background: 'var(--gray-100)' }} />
+        <div style={{ width: 60, height: 40, background: 'var(--gray-100)', borderRadius: 8 }} />
+      </div>
+      <div style={{ width: 80, height: 32, background: 'var(--gray-100)', borderRadius: 6, margin: '0 1rem' }} />
+      <div style={{ width: 100, height: 40, background: 'var(--gray-100)', borderRadius: 8 }} />
+    </div>
+  </div>
+);
+
 const SearchResultPage = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -134,15 +149,33 @@ const SearchResultPage = () => {
   const passengers = parseInt(params.get('passengers') || '1');
 
   const [trips, setTrips] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [filter, setFilter] = useState({ busType: 'all', sort: 'time', maxPrice: '' });
+
+  const doSearch = useCallback(async () => {
+    if (!from || !to || !date) return;
+    setLoading(true);
+    setError('');
+    try {
+      const results = await tripApi.search(from, to, date);
+      setTrips(results);
+    } catch (err) {
+      console.error('Search error:', err);
+      if (err.message?.includes('fetch')) {
+        setError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra backend đã chạy chưa.');
+      } else {
+        setError(err.message || 'Có lỗi khi tìm kiếm. Vui lòng thử lại.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [from, to, date]);
 
   useEffect(() => {
     document.title = `${from} → ${to} | Vé Vui`;
-    if (from && to && date) {
-      const results = searchTrips(from, to, date);
-      setTrips(results);
-    }
-  }, [from, to, date]);
+    doSearch();
+  }, [doSearch]);
 
   const filtered = trips
     .filter(t => filter.busType === 'all' || t.busType?.code === filter.busType)
@@ -150,7 +183,7 @@ const SearchResultPage = () => {
     .sort((a, b) => {
       if (filter.sort === 'price-asc') return a.price - b.price;
       if (filter.sort === 'price-desc') return b.price - a.price;
-      return a.departureTime.localeCompare(b.departureTime);
+      return (a.departureTime || '').localeCompare(b.departureTime || '');
     });
 
   const handleSelect = (trip) => {
@@ -181,7 +214,8 @@ const SearchResultPage = () => {
                 {from} <FiArrowRight /> {to}
               </h1>
               <p className="sr-subtitle">
-                {dateLabel} · {passengers} hành khách · <strong>{filtered.length}</strong> chuyến xe
+                {dateLabel} · {passengers} hành khách ·{' '}
+                {loading ? 'Đang tìm...' : <><strong>{filtered.length}</strong> chuyến xe</>}
               </p>
             </div>
           </div>
@@ -235,20 +269,51 @@ const SearchResultPage = () => {
 
             {/* Trip list */}
             <div className="sr-list">
-              {filtered.length === 0 ? (
+              {/* Error state */}
+              {error && !loading && (
                 <div className="sr-empty">
-                  <div className="sr-empty-icon">🚌</div>
-                  <h3>Không tìm thấy chuyến xe</h3>
-                  <p>Không có chuyến xe phù hợp với bộ lọc của bạn. Hãy thử thay đổi bộ lọc hoặc chọn ngày khác.</p>
+                  <div className="sr-empty-icon"><FiAlertCircle size={48} style={{ color: 'var(--error, #ef4444)' }} /></div>
+                  <h3>Không thể tải chuyến xe</h3>
+                  <p>{error}</p>
+                  <button className="btn btn-primary" onClick={doSearch}>
+                    <FiRefreshCw size={14} /> Thử lại
+                  </button>
+                </div>
+              )}
+
+              {/* Loading state */}
+              {loading && (
+                <>
+                  <TripSkeleton />
+                  <TripSkeleton />
+                  <TripSkeleton />
+                </>
+              )}
+
+              {/* Empty state */}
+              {!loading && !error && filtered.length === 0 && trips.length > 0 && (
+                <div className="sr-empty">
+                  <div className="sr-empty-icon">🔍</div>
+                  <h3>Không có kết quả với bộ lọc hiện tại</h3>
+                  <p>Hãy thử thay đổi bộ lọc hoặc chọn ngày khác.</p>
                   <button className="btn btn-primary" onClick={() => setFilter({ busType: 'all', sort: 'time', maxPrice: '' })}>
                     Xóa bộ lọc
                   </button>
                 </div>
-              ) : (
-                filtered.map(trip => (
-                  <TripCard key={trip.id} trip={trip} onSelect={handleSelect} />
-                ))
               )}
+
+              {!loading && !error && trips.length === 0 && (
+                <div className="sr-empty">
+                  <div className="sr-empty-icon">🚌</div>
+                  <h3>Không tìm thấy chuyến xe</h3>
+                  <p>Không có chuyến xe nào từ <strong>{from}</strong> đến <strong>{to}</strong> vào ngày này. Hãy thử chọn ngày khác.</p>
+                </div>
+              )}
+
+              {/* Results */}
+              {!loading && !error && filtered.map(trip => (
+                <TripCard key={trip.id} trip={trip} onSelect={handleSelect} />
+              ))}
             </div>
           </div>
         </div>

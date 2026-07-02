@@ -7,7 +7,7 @@ import {
 } from 'recharts';
 import {
   FiTrendingUp, FiTrendingDown, FiArrowRight,
-  FiUsers, FiCalendar, FiCreditCard, FiDollarSign
+  FiUsers, FiCalendar, FiCreditCard, FiDollarSign, FiBarChart2
 } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
@@ -73,17 +73,17 @@ const Dashboard = () => {
             <FiCalendar size={15}/> Thêm chuyến
           </Link>
           <Link to="/reports" className="a-btn a-btn-ghost" id="view-reports">
-            <FiBarChart2Icon /> Xem báo cáo
+            <FiBarChart2 size={15}/> Xem báo cáo
           </Link>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="kpi-grid">
-        <KPICard label="Doanh thu hôm nay" value={formatPrice(stats.todayRevenue)} icon={<FiDollarSign />} colorClass="blue"   change="+12% so hôm qua" changeDir="up" />
-        <KPICard label="Vé bán hôm nay"    value={stats.todayTickets}               icon={<FiCreditCard />} colorClass="green"  change="+3 so hôm qua"   changeDir="up" />
+        <KPICard label="Doanh thu hôm nay" value={formatPrice(stats.todayRevenue)} icon={<FiDollarSign />} colorClass="blue"   change={stats.revenueChange !== 0 ? `${stats.revenueChange > 0 ? '+' : ''}${stats.revenueChange}% so hôm qua` : null} changeDir={stats.revenueChange >= 0 ? 'up' : 'down'} />
+        <KPICard label="Vé bán hôm nay"    value={stats.todayTickets}               icon={<FiCreditCard />} colorClass="green"  change={stats.ticketChange !== 0 ? `${stats.ticketChange > 0 ? '+' : ''}${stats.ticketChange} so hôm qua` : null} changeDir={stats.ticketChange >= 0 ? 'up' : 'down'} />
         <KPICard label="Chuyến đi hôm nay" value={stats.todayTrips}                 icon={<FiCalendar />}   colorClass="orange" sub="Đang hoạt động" />
-        <KPICard label="Tổng khách hàng"   value={stats.totalCustomers}             icon={<FiUsers />}      colorClass="purple" change="+1 tuần này" changeDir="up" />
+        <KPICard label="Tổng khách hàng"   value={stats.totalCustomers}             icon={<FiUsers />}      colorClass="purple" />
       </div>
 
       {/* Charts row */}
@@ -213,12 +213,5 @@ const Dashboard = () => {
     </AdminLayout>
   );
 };
-
-// Icon fallback
-const FiBarChart2Icon = () => (
-  <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M18 20V10M12 20V4M6 20v-4"/>
-  </svg>
-);
 
 export default Dashboard;

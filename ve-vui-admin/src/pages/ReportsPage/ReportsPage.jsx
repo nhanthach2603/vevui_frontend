@@ -16,6 +16,17 @@ const ReportsPage = () => {
   const avgRevenue   = Math.round(totalRevenue / revenueData.length);
   const bestMonth    = revenueData.reduce((a,b) => a.revenue > b.revenue ? a : b);
 
+  const exportCSV = () => {
+    const headers = ['Tháng', 'Doanh thu (₫)', 'Vé bán'];
+    const rows = revenueData.map(d => [d.month, d.revenue, d.tickets]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `ve-vui-bao-cao-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   return (
     <AdminLayout title="Báo cáo">
       <div className="page-header">
@@ -23,7 +34,7 @@ const ReportsPage = () => {
           <h1 className="page-title">Báo cáo doanh thu</h1>
           <p className="page-subtitle">Tổng hợp dữ liệu kinh doanh năm 2024</p>
         </div>
-        <button className="a-btn a-btn-ghost" onClick={() => alert('Export PDF — chức năng thực tế')} id="export-report">
+        <button className="a-btn a-btn-ghost" onClick={exportCSV} id="export-report">
           <FiDownload size={15}/> Xuất báo cáo
         </button>
       </div>

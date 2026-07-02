@@ -50,9 +50,14 @@ export const BookingProvider = ({ children }) => {
   const setPayment   = useCallback((p) => dispatch({ type: 'SET_PAYMENT', payload: p }), []);
   const confirmTicket = useCallback((ticket) => {
     dispatch({ type: 'SET_TICKET', payload: ticket });
-    // Save to localStorage
-    const existing = JSON.parse(localStorage.getItem('vevui_tickets') || '[]');
-    localStorage.setItem('vevui_tickets', JSON.stringify([...existing, ticket]));
+    // Lưu vào localStorage (dùng cho fallback tra cứu offline)
+    try {
+      const existing = JSON.parse(localStorage.getItem('vevui_tickets') || '[]');
+      // Chỉ thêm nếu chưa tồn tại
+      if (!existing.find(t => t.id === ticket.id)) {
+        localStorage.setItem('vevui_tickets', JSON.stringify([...existing, ticket]));
+      }
+    } catch { /* ignore localStorage errors */ }
   }, []);
   const reset = useCallback(() => dispatch({ type: 'RESET' }), []);
 

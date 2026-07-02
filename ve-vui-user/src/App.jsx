@@ -1,5 +1,6 @@
 // App.jsx — Main router configuration
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { BookingProvider } from './context/BookingContext';
 
@@ -13,10 +14,21 @@ import { NewsListPage, NewsDetailPage } from './pages/NewsPage/NewsPage';
 import AuthPage from './pages/AuthPage/AuthPage';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
-import { routes, formatPrice, formatDuration } from './services/mockData';
+import { routeApi, formatPrice, formatDuration } from './services/api';
 
 // ── Schedule Page ──
 const SchedulePage = () => {
+  const [routes, setRoutes] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.title = 'Lịch trình | Vé Vui';
+    routeApi.getAll()
+      .then(data => setRoutes(data || []))
+      .catch(() => setRoutes([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
@@ -26,22 +38,28 @@ const SchedulePage = () => {
           <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.05rem' }}>Danh sách tất cả các tuyến đường và lịch chạy</p>
         </section>
         <div className="container" style={{ padding: '3rem 1.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-            {routes.map(r => (
-              <div key={r.id} className="card" style={{ padding: '1.5rem', cursor: 'pointer' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                  <span style={{ fontWeight: 800, fontSize: '1rem' }}>{r.from}</span>
-                  <span style={{ color: 'var(--gray-300)', fontSize: '1.2rem' }}>→</span>
-                  <span style={{ fontWeight: 800, fontSize: '1rem' }}>{r.to}</span>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-400)' }}>Đang tải tuyến đường...</div>
+          ) : routes.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-400)' }}>Chưa có tuyến đường nào.</div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+              {routes.map(r => (
+                <div key={r.id} className="card" style={{ padding: '1.5rem', cursor: 'pointer' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>{r.from}</span>
+                    <span style={{ color: 'var(--gray-300)', fontSize: '1.2rem' }}>→</span>
+                    <span style={{ fontWeight: 800, fontSize: '1rem' }}>{r.to}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--gray-500)', flexWrap: 'wrap' }}>
+                    <span>⏱ {formatDuration(r.duration)}</span>
+                    <span>📍 {r.distance}km</span>
+                    <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Từ {formatPrice(r.basePrice)}</span>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--gray-500)', flexWrap: 'wrap' }}>
-                  <span>⏱ {formatDuration(r.duration)}</span>
-                  <span>📍 {r.distance}km</span>
-                  <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Từ {formatPrice(r.basePrice)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
       <Footer />

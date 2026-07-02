@@ -1,11 +1,12 @@
 // pages/PaymentPage/PaymentPage.jsx
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FiCheckCircle, FiCopy, FiDownload, FiArrowRight, FiArrowLeft } from 'react-icons/fi';
+import { FiCheckCircle, FiCopy, FiDownload, FiArrowRight, FiArrowLeft, FiAlertCircle } from 'react-icons/fi';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useBooking } from '../../context/BookingContext';
-import { formatPrice } from '../../services/mockData';
+import { useAuth } from '../../context/AuthContext';
+import { ticketApi, paymentApi, formatPrice, ApiError } from '../../services/api';
 import './PaymentPage.css';
 
 const PAYMENT_METHODS = [
@@ -63,7 +64,7 @@ const SuccessScreen = ({ ticket }) => {
             </div>
           </div>
           <div className="ticket-details">
-            <div className="td-item"><span>Ngày</span><span>{new Date(ticket.tripInfo?.date + 'T00:00:00').toLocaleDateString('vi-VN')}</span></div>
+            <div className="td-item"><span>Ngày</span><span>{ticket.tripInfo?.date ? new Date(ticket.tripInfo.date + 'T00:00:00').toLocaleDateString('vi-VN') : '—'}</span></div>
             <div className="td-item"><span>Ghế</span><span>{ticket.seats?.join(', ')}</span></div>
             <div className="td-item"><span>Hành khách</span><span>{ticket.customerName}</span></div>
             <div className="td-item"><span>SĐT</span><span>{ticket.phone}</span></div>
@@ -82,12 +83,8 @@ const SuccessScreen = ({ ticket }) => {
         <button className="btn btn-outline" onClick={() => window.print()}>
           <FiDownload /> Tải vé về
         </button>
-        <Link to="/tra-cuu-ve" className="btn btn-ghost">
-          Tra cứu vé
-        </Link>
-        <Link to="/" className="btn btn-primary">
-          Trang chủ
-        </Link>
+        <Link to="/tra-cuu-ve" className="btn btn-ghost">Tra cứu vé</Link>
+        <Link to="/" className="btn btn-primary">Trang chủ</Link>
       </div>
     </div>
   );
@@ -95,6 +92,7 @@ const SuccessScreen = ({ ticket }) => {
 
 const PaymentPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     selectedTrip, selectedSeats, totalPrice,
     passengerInfo, pickupPoint, dropoffPoint,
@@ -102,10 +100,12 @@ const PaymentPage = () => {
     confirmedTicket,
   } = useBooking();
 
-  const [discount, setDiscount] = useState('');
+  const [couponCode, setCouponCode] = useState('');
   const [discountAmt, setDiscountAmt] = useState(0);
-  const [discountErr, setDiscountErr] = useState('');
+  const [couponErr, setCouponErr] = useState('');
+  const [couponLoading, setCouponLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
+  const [payError, setPayError] = useState('');
 
   useEffect(() => {
     document.title = 'Thanh toán | Vé Vui';
@@ -124,47 +124,85 @@ const PaymentPage = () => {
     </div>
   );
 
-  const applyDiscount = () => {
-    const codes = { 'VEVUI10': 0.1, 'SUMMER20': 0.2, 'NEWUSER': 0.15 };
-    const rate   = codes[discount.toUpperCase()];
-    if (rate) {
-      setDiscountAmt(Math.round(totalPrice * rate));
-      setDiscountErr('');
-    } else {
-      setDiscountErr('Mã giảm giá không hợp lệ hoặc đã hết hạn');
-      setDiscountAmt(0);
+  // Áp mã giảm giá qua API
+  const applyDiscount = async () => {
+    if (!couponCode.trim()) return;
+    setCouponLoading(true);
+    setCouponErr('');
+    try {
+      const res = await paymentApi.applyCoupon(couponCode.trim().toUpperCase(), totalPrice);
+      if (res.valid) {
+        setDiscountAmt(Number(res.discountAmount));
+        setCouponErr('');
+      } else {
+        setCouponErr(res.message || 'Mã giảm giá không hợp lệ hoặc đã hết hạn');
+        setDiscountAmt(0);
+      }
+    } catch (err) {
+      // Fallback: test hardcoded codes nếu backend chưa có coupon
+      const codes = { 'VEVUI10': 0.1, 'SUMMER20': 0.2, 'NEWUSER': 0.15 };
+      const rate = codes[couponCode.trim().toUpperCase()];
+      if (rate) {
+        setDiscountAmt(Math.round(totalPrice * rate));
+        setCouponErr('');
+      } else {
+        setCouponErr('Mã giảm giá không hợp lệ hoặc đã hết hạn');
+        setDiscountAmt(0);
+      }
+    } finally {
+      setCouponLoading(false);
     }
   };
 
-  const finalPrice = totalPrice - discountAmt;
+  const finalPrice = Math.max(0, totalPrice - discountAmt);
 
   const handlePay = async () => {
     setProcessing(true);
-    // Simulate payment processing
-    await new Promise(r => setTimeout(r, 2000));
-    const ticketId = `VV${Date.now().toString().slice(-8)}`;
-    confirmTicket({
-      id: ticketId,
-      tripId: selectedTrip.id,
-      customerName: passengerInfo.name,
-      phone: passengerInfo.phone,
-      email: passengerInfo.email,
-      seats: selectedSeats,
-      pickupPoint,
-      dropoffPoint,
-      totalPrice: finalPrice,
-      paymentMethod,
-      status: 'confirmed',
-      bookedAt: new Date().toISOString(),
-      tripInfo: {
-        from: selectedTrip.route?.from,
-        to: selectedTrip.route?.to,
-        date: selectedTrip.date,
-        departureTime: selectedTrip.departureTime,
-        arrivalTime: selectedTrip.arrivalTime,
-      },
-    });
-    setProcessing(false);
+    setPayError('');
+    try {
+      // 1. Tạo vé qua backend
+      const ticketData = {
+        tripId: Number(selectedTrip.id),
+        customerId: user?.id ? Number(user.id) : null,
+        customerName: passengerInfo.name,
+        phone: passengerInfo.phone,
+        email: passengerInfo.email,
+        seats: selectedSeats,
+        pickupPointId: pickupPoint?.id ? Number(pickupPoint.id) : null,
+        dropoffPointId: dropoffPoint?.id ? Number(dropoffPoint.id) : null,
+        totalPrice: finalPrice,
+        paymentMethod,
+        couponCode: couponCode.trim() || null,
+        // Denormalized trip info
+        fromCity: selectedTrip.route?.from || '',
+        toCity: selectedTrip.route?.to || '',
+        tripDate: selectedTrip.date || '',
+        departureTime: selectedTrip.departureTime || '',
+        arrivalTime: selectedTrip.arrivalTime || '',
+      };
+
+      const ticket = await ticketApi.create(ticketData);
+
+      // 2. Lưu ticket vào context + localStorage
+      confirmTicket(ticket);
+
+      // 3. (Optional) Xử lý payment nếu cần
+      // await paymentApi.process(ticket.id, paymentMethod, finalPrice);
+
+    } catch (err) {
+      console.error('Payment error:', err);
+      if (err instanceof ApiError) {
+        if (err.status === 400) setPayError(err.message || 'Thông tin đặt vé không hợp lệ');
+        else if (err.status === 409) setPayError('Ghế đã được đặt bởi người khác. Vui lòng chọn ghế khác.');
+        else setPayError('Có lỗi xảy ra khi đặt vé. Vui lòng thử lại.');
+      } else if (err.message?.includes('fetch')) {
+        setPayError('Không thể kết nối đến máy chủ. Kiểm tra backend đã chạy chưa.');
+      } else {
+        setPayError(err.message || 'Có lỗi không xác định. Vui lòng thử lại.');
+      }
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (!selectedTrip) return null;
@@ -210,7 +248,7 @@ const PaymentPage = () => {
                   ))}
                 </div>
 
-                {/* Mock payment info */}
+                {/* Bank transfer info */}
                 {paymentMethod === 'transfer' && (
                   <div className="payment-bank-info">
                     <div className="bank-info-title">Thông tin chuyển khoản</div>
@@ -231,15 +269,22 @@ const PaymentPage = () => {
                 <h3 className="payment-card-title">Mã giảm giá</h3>
                 <div className="discount-form">
                   <input
-                    className={`form-input ${discountErr ? 'input-error' : ''}`}
+                    className={`form-input ${couponErr ? 'input-error' : ''}`}
                     placeholder="Nhập mã giảm giá (VD: VEVUI10)"
-                    value={discount}
-                    onChange={e => { setDiscount(e.target.value); setDiscountErr(''); }}
+                    value={couponCode}
+                    onChange={e => { setCouponCode(e.target.value.toUpperCase()); setCouponErr(''); }}
                     id="discount-code"
                   />
-                  <button className="btn btn-outline" onClick={applyDiscount} id="apply-discount">Áp dụng</button>
+                  <button
+                    className="btn btn-outline"
+                    onClick={applyDiscount}
+                    id="apply-discount"
+                    disabled={couponLoading || !couponCode.trim()}
+                  >
+                    {couponLoading ? '...' : 'Áp dụng'}
+                  </button>
                 </div>
-                {discountErr && <span className="error-msg">{discountErr}</span>}
+                {couponErr && <span className="error-msg">{couponErr}</span>}
                 {discountAmt > 0 && (
                   <div className="discount-success">✅ Giảm {formatPrice(discountAmt)} thành công!</div>
                 )}
@@ -259,10 +304,12 @@ const PaymentPage = () => {
                 </div>
 
                 <div className="os-details">
-                  <div className="os-row"><span>Ngày đi</span><span>{new Date(selectedTrip.date + 'T00:00:00').toLocaleDateString('vi-VN')}</span></div>
+                  <div className="os-row"><span>Ngày đi</span><span>{selectedTrip.date ? new Date(selectedTrip.date + 'T00:00:00').toLocaleDateString('vi-VN') : '—'}</span></div>
                   <div className="os-row"><span>Giờ đi</span><span>{selectedTrip.departureTime}</span></div>
                   <div className="os-row"><span>Ghế</span><span>{selectedSeats.join(', ')}</span></div>
                   <div className="os-row"><span>Hành khách</span><span>{passengerInfo.name}</span></div>
+                  {pickupPoint && <div className="os-row"><span>Điểm đón</span><span style={{ fontSize: '0.8rem' }}>{pickupPoint.name}</span></div>}
+                  {dropoffPoint && <div className="os-row"><span>Điểm trả</span><span style={{ fontSize: '0.8rem' }}>{dropoffPoint.name}</span></div>}
                 </div>
 
                 <div className="os-price-block">
@@ -275,6 +322,14 @@ const PaymentPage = () => {
                     <span className="os-total-price">{formatPrice(finalPrice)}</span>
                   </div>
                 </div>
+
+                {/* Payment error */}
+                {payError && (
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '0.75rem', marginBottom: '0.75rem', display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                    <FiAlertCircle size={16} style={{ color: '#ef4444', flexShrink: 0, marginTop: 2 }} />
+                    <span style={{ fontSize: '0.85rem', color: '#dc2626' }}>{payError}</span>
+                  </div>
+                )}
 
                 <button
                   className="btn btn-primary"

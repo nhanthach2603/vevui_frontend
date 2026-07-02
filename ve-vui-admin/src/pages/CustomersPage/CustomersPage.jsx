@@ -66,7 +66,7 @@ const CustomersPage = () => {
               {filtered.map(c => (
                 <tr key={c.id}>
                   <td>
-                    <div style={{ display:'flex', alignItems:'center', gap:var_sp3(10) }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
                       <div style={{ width:38, height:38, background:'var(--primary-bg)', borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--primary)', fontWeight:800, fontSize:'1rem', flexShrink:0 }}>
                         {c.name.charAt(0)}
                       </div>
@@ -146,5 +146,4 @@ const CustomersPage = () => {
   );
 };
 
-const var_sp3 = (n) => n;
 export default CustomersPage;

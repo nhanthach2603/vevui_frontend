@@ -39,6 +39,28 @@ const TicketsPage = () => {
 
   const totalRevenue = tickets.filter(t=>t.status==='confirmed').reduce((s,t)=>s+t.totalPrice,0);
 
+  const exportCSV = () => {
+    const headers = ['Mã vé','Hành khách','SĐT','Tuyến','Ghế','Tổng tiền','Phương thức','Trạng thái','Ngày đặt'];
+    const rows = filtered.map(t => {
+      const route = getRoute(t.routeId);
+      return [
+        t.id, t.customerName, t.phone,
+        `${route?.from} → ${route?.to}`,
+        t.seats.join(' '),
+        t.totalPrice,
+        PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod,
+        t.status === 'confirmed' ? 'Đã xác nhận' : 'Đã hủy',
+        new Date(t.bookedAt).toLocaleString('vi-VN'),
+      ];
+    });
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `ve-vui-danh-sach-ve-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click(); URL.revokeObjectURL(url);
+  };
+
   return (
     <AdminLayout title="Vé đặt">
       <div className="page-header">
@@ -48,7 +70,7 @@ const TicketsPage = () => {
             {tickets.length} vé · {tickets.filter(t=>t.status==='confirmed').length} xác nhận · Doanh thu: <strong style={{color:'var(--primary)'}}>{formatPrice(totalRevenue)}</strong>
           </p>
         </div>
-        <button className="a-btn a-btn-ghost" onClick={() => alert('Export CSV — chức năng thực tế')} id="export-tickets">
+        <button className="a-btn a-btn-ghost" onClick={exportCSV} id="export-tickets">
           <FiDownload size={15}/> Xuất CSV
         </button>
       </div>

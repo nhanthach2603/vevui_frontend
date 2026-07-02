@@ -12,7 +12,7 @@ export const buses = [
   { id: 'bus1', plateNumber: '51B-12345', typeId: 'bt1', status: 'active',      description: 'Xe Ghế Thường' },
   { id: 'bus2', plateNumber: '51B-67890', typeId: 'bt3', status: 'active',      description: 'Xe Giường Nằm' },
   { id: 'bus3', plateNumber: '51C-11111', typeId: 'bt4', status: 'active',      description: 'Xe Limousine' },
-  { id: 'bus4', plateNumber: '51C-22222', typeId: 'bt2', status: 'active',      description: 'Xe VIP' },
+  { id: 'bus4', plateNumber: '51C-22222', typeId: 'bt2', status: 'active',      description: 'Xe VIP', violationDate: '2026-06-15', violationExpiry: '2026-07-15', violationReason: 'Phạt vượt đèn đỏ - QL1A' },
   { id: 'bus5', plateNumber: '51D-33333', typeId: 'bt3', status: 'maintenance', description: 'Xe Giường Cabin' },
 ];
 
@@ -27,8 +27,8 @@ export const routes = [
   { id: 'r8', from: 'TP. Hồ Chí Minh', to: 'Phan Thiết', distance: 190, duration: 270, basePrice: 140000, active: true },
 ];
 
-const today = new Date().toISOString().split('T')[0];
 const addDays = (d, n) => { const r = new Date(d + 'T00:00:00'); r.setDate(r.getDate()+n); return r.toISOString().split('T')[0]; };
+const today = new Date().toISOString().split('T')[0];
 
 export const trips = [
   { id: 'trip1', routeId: 'r1', busId: 'bus1', date: today,           departureTime: '06:00', arrivalTime: '12:00', price: 180000, status: 'active', bookedSeats: 4 },
@@ -58,11 +58,11 @@ export const tickets = [
 ];
 
 export const newsArticles = [
-  { id: 'n1', title: 'Vé Vui khuyến mãi mùa hè 2024 — Giảm đến 30%', category: 'Khuyến mãi', author: 'Admin', publishedAt: '2024-06-01', status: 'published', views: 1520 },
-  { id: 'n2', title: 'Khai trương tuyến mới TP.HCM - Phú Quốc',        category: 'Tin tức',    author: 'Admin', publishedAt: '2024-06-05', status: 'published', views: 892 },
-  { id: 'n3', title: 'Hướng dẫn đặt vé trực tuyến chỉ 2 phút',         category: 'Hướng dẫn', author: 'Admin', publishedAt: '2024-06-10', status: 'published', views: 2341 },
-  { id: 'n4', title: '10 kinh nghiệm du lịch Đà Lạt bằng xe khách',    category: 'Du lịch',   author: 'Admin', publishedAt: '2024-06-12', status: 'published', views: 3150 },
-  { id: 'n5', title: 'Ra mắt đội xe Limousine cao cấp mới',             category: 'Tin tức',   author: 'Admin', publishedAt: '2024-06-17', status: 'draft',     views: 0 },
+  { id: 'n1', title: 'Vé Vui khuyến mãi mùa hè 2024 — Giảm đến 30%', excerpt: 'Nhân dịp mùa hè rực rỡ, Vé Vui tung chương trình khuyến mãi đặc biệt với mức giảm lên đến 30% cho tất cả tuyến.', category: 'Khuyến mãi', author: 'Admin', publishedAt: '2024-06-01', status: 'published', views: 1520 },
+  { id: 'n2', title: 'Khai trương tuyến mới TP.HCM - Phú Quốc', excerpt: 'Vé Vui chính thức mở tuyến xe khách đến thiên đường biển đảo Phú Quốc với xe Limousine cao cấp.', category: 'Tin tức', author: 'Admin', publishedAt: '2024-06-05', status: 'published', views: 892 },
+  { id: 'n3', title: 'Hướng dẫn đặt vé trực tuyến chỉ 2 phút', excerpt: 'Đặt vé nhanh chóng, tiện lợi ngay trên website Vé Vui mà không cần ra bến xe.', category: 'Hướng dẫn', author: 'Admin', publishedAt: '2024-06-10', status: 'published', views: 2341 },
+  { id: 'n4', title: '10 kinh nghiệm du lịch Đà Lạt bằng xe khách', excerpt: 'Những mẹo hay giúp chuyến đi Đà Lạt của bạn trở nên dễ dàng và thú vị hơn.', category: 'Du lịch', author: 'Admin', publishedAt: '2024-06-12', status: 'published', views: 3150 },
+  { id: 'n5', title: 'Ra mắt đội xe Limousine cao cấp mới', excerpt: 'Vé Vui đầu tư thêm 10 xe Limousine 22 chỗ cao cấp, nâng cao trải nghiệm hành khách.', category: 'Tin tức', author: 'Admin', publishedAt: '2024-06-17', status: 'draft', views: 0 },
 ];
 
 // Revenue chart data
@@ -104,12 +104,33 @@ export const formatDuration = (m) => {
 
 // Stats summary
 export const getDashboardStats = () => {
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
   const todayTickets = tickets.filter(t => {
     const trip = trips.find(tr => tr.id === t.tripId);
     return trip?.date === today;
   });
+  const yesterdayTickets = tickets.filter(t => {
+    const trip = trips.find(tr => tr.id === t.tripId);
+    return trip?.date === yesterday;
+  });
+
   const todayRevenue = todayTickets.reduce((s, t) => s + (t.status === 'confirmed' ? t.totalPrice : 0), 0);
-  const todayTrips   = trips.filter(t => t.date === today).length;
+  const yesterdayRevenue = yesterdayTickets.reduce((s, t) => s + (t.status === 'confirmed' ? t.totalPrice : 0), 0);
+
+  const todayTrips = trips.filter(t => t.date === today).length;
   const totalTickets = tickets.filter(t => t.status === 'confirmed').length;
-  return { todayRevenue, todayTickets: todayTickets.length, todayTrips, totalCustomers: customers.length, totalTickets };
+
+  const revenueChange = yesterdayRevenue > 0
+    ? Math.round(((todayRevenue - yesterdayRevenue) / yesterdayRevenue) * 100)
+    : 0;
+  const ticketChange = todayTickets.length - yesterdayTickets.length;
+
+  return {
+    todayRevenue, yesterdayRevenue,
+    todayTickets: todayTickets.length, yesterdayTickets: yesterdayTickets.length,
+    todayTrips, totalCustomers: customers.length, totalTickets,
+    revenueChange, ticketChange,
+  };
 };

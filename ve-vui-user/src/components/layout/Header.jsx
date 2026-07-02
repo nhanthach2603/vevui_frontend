@@ -1,7 +1,7 @@
 // components/layout/Header.jsx
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { FiTruck, FiPhone, FiUser, FiMenu, FiX, FiLogOut, FiCreditCard } from 'react-icons/fi';
+import {  FiPhone, FiUser, FiMenu, FiX, FiLogOut, FiCreditCard } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
 import { NAV_LINKS } from '../../constants/routes';
 import './Header.css';

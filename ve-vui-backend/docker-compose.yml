@@ -1,0 +1,266 @@
+version: '3.8'
+
+# ══════════════════════════════════════════════
+#  VÉ VUI — Microservices Docker Compose
+#  Dùng 1 Dockerfile duy nhất ở thư mục root
+#
+#  Chạy: docker-compose up -d
+#  Eureka Dashboard: http://localhost:8761
+#  API Gateway:      http://localhost:8900
+# ══════════════════════════════════════════════
+
+networks:
+  vevui-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  kafka-data:
+  zookeeper-data:
+
+# ── x-build-common: template chung cho mọi service ──────
+x-build-common: &build-common
+  context: .
+  dockerfile: Dockerfile
+
+services:
+
+  # ── Infrastructure ──────────────────────────────────────
+
+  mysql:
+    image: mysql:8.0
+    container_name: vevui-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: vevui123
+      MYSQL_USER: vevui
+      MYSQL_PASSWORD: vevui123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - vevui-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pvevui123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: vevui-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - vevui-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: vevui-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+    networks:
+      - vevui-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: vevui-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - vevui-network
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ── Spring Boot Services (tất cả dùng chung 1 Dockerfile) ──
+
+  eureka-server:
+    build:
+      <<: *build-common
+      args:
+        SERVICE: eureka-server
+    container_name: vevui-eureka
+    restart: unless-stopped
+    ports:
+      - "8761:8761"
+    networks:
+      - vevui-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      <<: *build-common
+      args:
+        SERVICE: api-gateway
+    container_name: vevui-gateway
+    restart: unless-stopped
+    ports:
+      - "8900:8900"
+    environment:
+      EUREKA_HOST: eureka-server
+      REDIS_HOST: redis
+      JWT_SECRET: vevui-super-secret-key-for-jwt-authentication-2024-please-change-in-production
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - vevui-network
+
+  user-service:
+    build:
+      <<: *build-common
+      args:
+        SERVICE: user-service
+    container_name: vevui-user-service
+    restart: unless-stopped
+    ports:
+      - "8811:8811"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: vevui123
+      EUREKA_HOST: eureka-server
+      JWT_SECRET: vevui-super-secret-key-for-jwt-authentication-2024-please-change-in-production
+    depends_on:
+      mysql:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - vevui-network
+
+  trip-service:
+    build:
+      <<: *build-common
+      args:
+        SERVICE: trip-service
+    container_name: vevui-trip-service
+    restart: unless-stopped
+    ports:
+      - "8810:8810"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: vevui123
+      EUREKA_HOST: eureka-server
+      REDIS_HOST: redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - vevui-network
+
+  order-service:
+    build:
+      <<: *build-common
+      args:
+        SERVICE: order-service
+    container_name: vevui-order-service
+    restart: unless-stopped
+    ports:
+      - "8813:8813"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: vevui123
+      EUREKA_HOST: eureka-server
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - vevui-network
+
+  news-service:
+    build:
+      <<: *build-common
+      args:
+        SERVICE: news-service
+    container_name: vevui-news-service
+    restart: unless-stopped
+    ports:
+      - "8812:8812"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASS: vevui123
+      EUREKA_HOST: eureka-server
+      REDIS_HOST: redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - vevui-network
+
+  notification-service:
+    build:
+      <<: *build-common
+      args:
+        SERVICE: notification-service
+    container_name: vevui-notification-service
+    restart: unless-stopped
+    ports:
+      - "8815:8815"
+    environment:
+      EUREKA_HOST: eureka-server
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    depends_on:
+      kafka:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    networks:
+      - vevui-network

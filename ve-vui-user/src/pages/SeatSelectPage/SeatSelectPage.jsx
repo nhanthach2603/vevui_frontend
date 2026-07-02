@@ -1,40 +1,118 @@
 // pages/SeatSelectPage/SeatSelectPage.jsx
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { FiArrowRight, FiArrowLeft, FiInfo } from 'react-icons/fi';
+import { FiArrowRight, FiArrowLeft, FiInfo, FiRefreshCw } from 'react-icons/fi';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useBooking } from '../../context/BookingContext';
-import { trips, getRoute, getBus, getBusType, generateSeatMap, formatPrice } from '../../services/mockData';
+import { tripApi, formatPrice } from '../../services/api';
 import './SeatSelectPage.css';
+
+// Tạo sơ đồ ghế từ SeatMapResponse của backend
+const buildSeatRows = (seatMapResponse) => {
+  if (!seatMapResponse?.seatRows) return [];
+  return seatMapResponse.seatRows;
+};
+
+// Fallback: generate seat map locally nếu API chưa trả seatRows
+const generateFallbackSeatMap = (busTypeCode, totalSeats, bookedSeats = []) => {
+  const seatsPerRow = busTypeCode === 'SLEEPER' ? 3 : 4;
+  const rowCount = Math.ceil(totalSeats / seatsPerRow);
+  const rows = [];
+  for (let r = 0; r < rowCount; r++) {
+    const row = [];
+    const cols = busTypeCode === 'SLEEPER' ? ['A', 'B', 'C'] : ['A', 'B', 'C', 'D'];
+    for (const col of cols) {
+      const id = `${r + 1}${col}`;
+      row.push({
+        id,
+        label: id,
+        status: bookedSeats.includes(id) ? 'booked' : 'available',
+        floor: busTypeCode === 'SLEEPER' ? (col === 'C' ? 2 : 1) : 1,
+      });
+    }
+    rows.push(row);
+  }
+  return rows;
+};
 
 const SeatSelectPage = () => {
   const { tripId } = useParams();
   const navigate   = useNavigate();
   const { selectedSeats, selectedTrip, setTrip, toggleSeat, searchParams } = useBooking();
 
+  const [seatMap, setSeatMap] = useState([]);
+  const [loadingSeats, setLoadingSeats] = useState(false);
+  const [loadingTrip, setLoadingTrip] = useState(false);
+  const [error, setError] = useState('');
+
+  // Load trip nếu chưa có (ví dụ user truy cập trực tiếp qua URL)
   useEffect(() => {
-    if (!selectedTrip || selectedTrip.id !== tripId) {
-      const trip = trips.find(t => t.id === tripId);
-      if (trip) {
-        const bus     = getBus(trip.busId);
-        const busType = getBusType(bus?.typeId);
-        const route   = getRoute(trip.routeId);
-        setTrip({ ...trip, bus, busType, route });
+    const loadTrip = async () => {
+      if (!selectedTrip || String(selectedTrip.id) !== String(tripId)) {
+        setLoadingTrip(true);
+        try {
+          const trip = await tripApi.getById(tripId);
+          setTrip({ ...trip });
+        } catch (err) {
+          setError('Không tìm thấy chuyến xe. Vui lòng quay lại và thử lại.');
+        } finally {
+          setLoadingTrip(false);
+        }
       }
-    }
+    };
+    loadTrip();
     document.title = 'Chọn ghế | Vé Vui';
   }, [tripId]);
 
-  if (!selectedTrip) {
+  // Load seat map từ backend
+  useEffect(() => {
+    if (!tripId) return;
+    const loadSeatMap = async () => {
+      setLoadingSeats(true);
+      setError('');
+      try {
+        const response = await tripApi.getSeatMap(tripId);
+        if (response?.seatRows && response.seatRows.length > 0) {
+          setSeatMap(buildSeatRows(response));
+        } else {
+          // Fallback nếu API không trả seatRows
+          const busTypeCode = selectedTrip?.busType?.code || 'STANDARD';
+          const totalSeats = selectedTrip?.busType?.seats || 40;
+          const bookedSeats = selectedTrip?.bookedSeats || [];
+          setSeatMap(generateFallbackSeatMap(busTypeCode, totalSeats, bookedSeats));
+        }
+      } catch (err) {
+        console.warn('SeatMap API failed, using fallback:', err);
+        // Dùng bookedSeats từ TripResponse
+        const busTypeCode = selectedTrip?.busType?.code || 'STANDARD';
+        const totalSeats = selectedTrip?.busType?.seats || 40;
+        const bookedSeats = selectedTrip?.bookedSeats || [];
+        setSeatMap(generateFallbackSeatMap(busTypeCode, totalSeats, bookedSeats));
+      } finally {
+        setLoadingSeats(false);
+      }
+    };
+    loadSeatMap();
+  }, [tripId, selectedTrip]);
+
+  const isSleeper = selectedTrip?.busType?.code === 'SLEEPER';
+  const maxSeats   = searchParams.passengers || 1;
+  const totalPrice = selectedSeats.length * (selectedTrip?.price || 0);
+
+  const handleContinue = () => {
+    if (selectedSeats.length < 1) return;
+    navigate(`/dat-ve/${tripId}`);
+  };
+
+  if (loadingTrip) {
     return (
       <div className="seat-page">
         <Header />
-        <main style={{ paddingTop: '72px', display:'flex', alignItems:'center', justifyContent:'center', minHeight:'80vh' }}>
-          <div style={{ textAlign:'center' }}>
-            <div style={{ fontSize:'3rem', marginBottom:'1rem' }}>🚌</div>
-            <h2>Không tìm thấy chuyến xe</h2>
-            <button className="btn btn-primary" onClick={() => navigate('/')} style={{ marginTop:'1rem' }}>Về trang chủ</button>
+        <main style={{ paddingTop: '72px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem', animation: 'spin 1s linear infinite', display: 'inline-block' }}>🔄</div>
+            <h2>Đang tải thông tin chuyến xe...</h2>
           </div>
         </main>
         <Footer />
@@ -42,15 +120,22 @@ const SeatSelectPage = () => {
     );
   }
 
-  const seatMap = generateSeatMap(selectedTrip.busType, selectedTrip.bookedSeats || []);
-  const isSleeper = selectedTrip.busType?.code === 'SLEEPER';
-  const maxSeats   = searchParams.passengers || 1;
-  const totalPrice = selectedSeats.length * selectedTrip.price;
-
-  const handleContinue = () => {
-    if (selectedSeats.length < 1) return;
-    navigate(`/dat-ve/${tripId}`);
-  };
+  if (!selectedTrip && !loadingTrip) {
+    return (
+      <div className="seat-page">
+        <Header />
+        <main style={{ paddingTop: '72px', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🚌</div>
+            <h2>Không tìm thấy chuyến xe</h2>
+            {error && <p style={{ color: 'var(--error, #ef4444)', marginBottom: '1rem' }}>{error}</p>}
+            <button className="btn btn-primary" onClick={() => navigate('/')} style={{ marginTop: '1rem' }}>Về trang chủ</button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
+  }
 
   return (
     <div className="seat-page">
@@ -85,8 +170,12 @@ const SeatSelectPage = () => {
                   <div className="driver-label">Tài xế</div>
                 </div>
 
-                {/* Render floors for sleeper, single map otherwise */}
-                {isSleeper ? (
+                {loadingSeats ? (
+                  <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-400)' }}>
+                    <FiRefreshCw size={24} style={{ animation: 'spin 1s linear infinite' }} />
+                    <p style={{ marginTop: '0.5rem' }}>Đang tải sơ đồ ghế...</p>
+                  </div>
+                ) : isSleeper ? (
                   <div className="seat-floors">
                     {[1, 2].map(floor => {
                       const floorRows = seatMap.filter(row => row[0]?.floor === floor);
@@ -168,7 +257,7 @@ const SeatSelectPage = () => {
                   </div>
                   <div className="sti-row">
                     <span className="sti-label">Ngày đi</span>
-                    <span className="sti-val">{new Date(selectedTrip.date + 'T00:00:00').toLocaleDateString('vi-VN')}</span>
+                    <span className="sti-val">{selectedTrip.date ? new Date(selectedTrip.date + 'T00:00:00').toLocaleDateString('vi-VN') : '—'}</span>
                   </div>
                   <div className="sti-row">
                     <span className="sti-label">Giờ đi</span>
@@ -212,7 +301,7 @@ const SeatSelectPage = () => {
 
                 <button
                   className="btn btn-primary"
-                  style={{ width:'100%', padding:'14px', fontSize:'1rem' }}
+                  style={{ width: '100%', padding: '14px', fontSize: '1rem' }}
                   onClick={handleContinue}
                   disabled={selectedSeats.length === 0}
                   id="continue-booking"
@@ -221,7 +310,7 @@ const SeatSelectPage = () => {
                 </button>
                 <button
                   className="btn btn-ghost"
-                  style={{ width:'100%', marginTop:8 }}
+                  style={{ width: '100%', marginTop: 8 }}
                   onClick={() => navigate(-1)}
                 >
                   <FiArrowLeft /> Quay lại

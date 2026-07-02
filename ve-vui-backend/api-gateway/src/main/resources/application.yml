@@ -1,0 +1,133 @@
+server:
+  port: 8900
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins:
+              - "http://localhost:5173"   # ve-vui-user (vite default)
+              - "http://localhost:5174"   # ve-vui-admin
+              - "http://localhost:3000"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+      routes:
+        # ── User Service ──
+        - id: user-service-auth
+          uri: lb://user-service
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - StripPrefix=0
+
+        - id: user-service-users
+          uri: lb://user-service
+          predicates:
+            - Path=/api/users/**
+          filters:
+            - StripPrefix=0
+
+        # ── Trip Service ──
+        - id: trip-service-routes
+          uri: lb://trip-service
+          predicates:
+            - Path=/api/routes/**
+          filters:
+            - StripPrefix=0
+
+        - id: trip-service-buses
+          uri: lb://trip-service
+          predicates:
+            - Path=/api/buses/**
+          filters:
+            - StripPrefix=0
+
+        - id: trip-service-trips
+          uri: lb://trip-service
+          predicates:
+            - Path=/api/trips/**
+          filters:
+            - StripPrefix=0
+
+        - id: trip-service-pickup
+          uri: lb://trip-service
+          predicates:
+            - Path=/api/pickup-points/**
+          filters:
+            - StripPrefix=0
+
+        - id: trip-service-admin
+          uri: lb://trip-service
+          predicates:
+            - Path=/api/admin/routes/**, /api/admin/buses/**, /api/admin/trips/**
+          filters:
+            - StripPrefix=0
+
+        # ── Order Service ──
+        - id: order-service-tickets
+          uri: lb://order-service
+          predicates:
+            - Path=/api/tickets/**
+          filters:
+            - StripPrefix=0
+
+        - id: order-service-payment
+          uri: lb://order-service
+          predicates:
+            - Path=/api/payment/**
+          filters:
+            - StripPrefix=0
+
+        - id: order-service-admin
+          uri: lb://order-service
+          predicates:
+            - Path=/api/admin/tickets/**
+          filters:
+            - StripPrefix=0
+
+        # ── News Service ──
+        - id: news-service
+          uri: lb://news-service
+          predicates:
+            - Path=/api/news/**, /api/admin/news/**
+          filters:
+            - StripPrefix=0
+
+      default-filters:
+        - name: RequestRateLimiter
+          args:
+            redis-rate-limiter.replenishRate: 100
+            redis-rate-limiter.burstCapacity: 200
+            redis-rate-limiter.requestedTokens: 1
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+jwt:
+  secret: ${JWT_SECRET:vevui-super-secret-key-for-jwt-authentication-2024-please-change-in-production}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    com.vevui.gateway: DEBUG

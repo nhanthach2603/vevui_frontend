@@ -1,17 +1,18 @@
 // pages/AuthPage/AuthPage.jsx
 import { useEffect, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FiUser, FiLock, FiPhone, FiMail, FiEye, FiEyeOff } from 'react-icons/fi';
 import { useAuth } from '../../context/AuthContext';
+import { ApiError } from '../../services/api';
 import './AuthPage.css';
 
 const AuthPage = () => {
-  const [params] = useSearchParams();
-  const navigate  = useNavigate();
+  const location   = useLocation();
+  const navigate   = useNavigate();
   const { login, register, isLoggedIn } = useAuth();
 
-  const isRegister = params.get('mode') === 'register';
-  const [mode, setMode] = useState(isRegister ? 'register' : 'login');
+  const isRegisterPath = location.pathname === '/dang-ky';
+  const [mode, setMode] = useState(isRegisterPath ? 'register' : 'login');
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -23,22 +24,49 @@ const AuthPage = () => {
     if (isLoggedIn) navigate('/');
   }, [mode, isLoggedIn]);
 
-  const handle = (f) => (e) => setForm(p => ({ ...p, [f]: e.target.value }));
+  const handle = (f) => (e) => {
+    setForm(p => ({ ...p, [f]: e.target.value }));
+    setError('');
+  };
 
   const submit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 600));
-    if (mode === 'login') {
-      if (!form.email || !form.password) { setError('Vui lòng nhập đầy đủ thông tin'); setLoading(false); return; }
-      login({ name: form.email.split('@')[0], email: form.email });
-    } else {
-      if (!form.name || !form.phone || !form.email || !form.password) { setError('Vui lòng nhập đầy đủ thông tin'); setLoading(false); return; }
-      register({ name: form.name, phone: form.phone, email: form.email });
+
+    try {
+      if (mode === 'login') {
+        if (!form.email || !form.password) {
+          setError('Vui lòng nhập đầy đủ thông tin');
+          return;
+        }
+        await login(form.email, form.password);
+        const from = location.state?.from || '/';
+        navigate(from);
+      } else {
+        if (!form.name || !form.email || !form.password) {
+          setError('Vui lòng nhập đầy đủ thông tin');
+          return;
+        }
+        if (form.password.length < 6) {
+          setError('Mật khẩu phải ít nhất 6 ký tự');
+          return;
+        }
+        await register(form.name, form.email, form.password, form.phone || undefined);
+        navigate('/');
+      }
+    } catch (err) {
+      if (err instanceof ApiError) {
+        if (err.status === 401) setError('Email hoặc mật khẩu không đúng');
+        else if (err.status === 409) setError('Email này đã được đăng ký. Vui lòng đăng nhập.');
+        else if (err.status === 400) setError(err.message || 'Thông tin không hợp lệ');
+        else setError('Có lỗi xảy ra. Vui lòng thử lại sau.');
+      } else {
+        setError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.');
+      }
+    } finally {
+      setLoading(false);
     }
-    navigate('/');
-    setLoading(false);
   };
 
   return (
@@ -72,31 +100,74 @@ const AuthPage = () => {
       <div className="auth-right">
         <div className="auth-form-wrapper animate-fadeInRight">
           <div className="auth-tabs">
-            <button className={`auth-tab ${mode === 'login' ? 'active' : ''}`} onClick={() => { setMode('login'); setError(''); }}>Đăng nhập</button>
-            <button className={`auth-tab ${mode === 'register' ? 'active' : ''}`} onClick={() => { setMode('register'); setError(''); }}>Đăng ký</button>
+            <button
+              className={`auth-tab ${mode === 'login' ? 'active' : ''}`}
+              onClick={() => { setMode('login'); setError(''); }}
+            >
+              Đăng nhập
+            </button>
+            <button
+              className={`auth-tab ${mode === 'register' ? 'active' : ''}`}
+              onClick={() => { setMode('register'); setError(''); }}
+            >
+              Đăng ký
+            </button>
           </div>
 
           <form onSubmit={submit} className="auth-form" id="auth-form">
             {mode === 'register' && (
               <>
                 <div className="form-group">
-                  <label className="form-label"><FiUser size={14} /> Họ và tên</label>
-                  <input className="form-input" placeholder="Nguyễn Văn A" value={form.name} onChange={handle('name')} id="reg-name" />
+                  <label className="form-label"><FiUser size={14} /> Họ và tên *</label>
+                  <input
+                    className="form-input"
+                    placeholder="Nguyễn Văn A"
+                    value={form.name}
+                    onChange={handle('name')}
+                    id="reg-name"
+                    required
+                  />
                 </div>
                 <div className="form-group">
                   <label className="form-label"><FiPhone size={14} /> Số điện thoại</label>
-                  <input className="form-input" placeholder="0901234567" value={form.phone} onChange={handle('phone')} type="tel" id="reg-phone" />
+                  <input
+                    className="form-input"
+                    placeholder="0901234567"
+                    value={form.phone}
+                    onChange={handle('phone')}
+                    type="tel"
+                    id="reg-phone"
+                  />
                 </div>
               </>
             )}
+
             <div className="form-group">
-              <label className="form-label"><FiMail size={14} /> Email</label>
-              <input className="form-input" placeholder="email@example.com" type="email" value={form.email} onChange={handle('email')} id="auth-email" />
+              <label className="form-label"><FiMail size={14} /> Email *</label>
+              <input
+                className="form-input"
+                placeholder="email@example.com"
+                type="email"
+                value={form.email}
+                onChange={handle('email')}
+                id="auth-email"
+                required
+              />
             </div>
+
             <div className="form-group">
-              <label className="form-label"><FiLock size={14} /> Mật khẩu</label>
+              <label className="form-label"><FiLock size={14} /> Mật khẩu *</label>
               <div className="password-wrapper">
-                <input className="form-input" placeholder="••••••••" type={showPw ? 'text' : 'password'} value={form.password} onChange={handle('password')} id="auth-password" />
+                <input
+                  className="form-input"
+                  placeholder="••••••••"
+                  type={showPw ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={handle('password')}
+                  id="auth-password"
+                  required
+                  minLength={6}
+                />
                 <button type="button" className="pw-toggle" onClick={() => setShowPw(s => !s)}>
                   {showPw ? <FiEyeOff /> : <FiEye />}
                 </button>
@@ -109,8 +180,16 @@ const AuthPage = () => {
 
             {error && <div className="auth-error">⚠️ {error}</div>}
 
-            <button className="btn btn-primary" style={{ width: '100%', padding: '14px', fontSize: '1rem', marginTop: 8 }} type="submit" disabled={loading} id="auth-submit">
-              {loading ? 'Đang xử lý...' : mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', padding: '14px', fontSize: '1rem', marginTop: 8 }}
+              type="submit"
+              disabled={loading}
+              id="auth-submit"
+            >
+              {loading
+                ? <span className="loading-dots">Đang xử lý<span>.</span><span>.</span><span>.</span></span>
+                : mode === 'login' ? 'Đăng nhập' : 'Tạo tài khoản'}
             </button>
           </form>
 
