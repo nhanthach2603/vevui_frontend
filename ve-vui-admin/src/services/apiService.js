@@ -94,6 +94,32 @@ export const deleteNews  = (id) => apiFetch(`/api/admin/news/${id}`, { method: '
 export const publishNews      = (id) => apiFetch(`/api/admin/news/${id}/publish`, { method: 'PUT' });
 export const unpublishNews    = (id) => apiFetch(`/api/admin/news/${id}/draft`, { method: 'PUT' });
 
+// ═══════════════════════════════════
+// ── Quản lý Xe (bổ sung) ──
+// ═══════════════════════════════════
+export const searchBusesAdmin   = (q)         => apiFetch(`/api/admin/buses/search?q=${encodeURIComponent(q)}`);
+export const fetchBusTypeById   = (id)        => apiFetch(`/api/admin/bus-types/${id}`);
+
+// ═══════════════════════════════════
+// ── Quản lý Vé (bổ sung Admin CRUD) ──
+// ═══════════════════════════════════
+export const deleteTicket         = (id)        => apiFetch(`/api/admin/tickets/${id}`, { method: 'DELETE' });
+export const createTicketAdmin    = (body)       => apiFetch('/api/admin/tickets', { method: 'POST', body: JSON.stringify(body) });
+
+// ═══════════════════════════════════
+// ── Quản lý Khách hàng (bổ sung Admin CRUD) ──
+// ═══════════════════════════════════
+export const searchUsersAdmin   = (q)         => apiFetch(`/api/admin/users/search?q=${encodeURIComponent(q)}`);
+export const createUserAdmin    = (body)       => apiFetch('/api/admin/users', { method: 'POST', body: JSON.stringify(body) });
+export const updateUserRole     = (id, role)   => apiFetch(`/api/admin/users/${id}/role`, { method: 'PUT', body: JSON.stringify({ role }) });
+
+// ═══════════════════════════════════
+// ── Quản lý Tin tức (bổ sung) ──
+// ═══════════════════════════════════
+export const fetchNewsById      = (id)        => apiFetch(`/api/admin/news/${id}`);
+export const searchNewsAdmin    = (q)         => apiFetch(`/api/admin/news/search?q=${encodeURIComponent(q)}`);
+export const fetchNewsByCategory = (cat, page = 0, size = 10) => apiFetch(`/api/news/category/${encodeURIComponent(cat)}?page=${page}&size=${size}`);
+
 // ── Format helpers ──
 export const formatPrice = (p) =>
   new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p || 0);
