@@ -105,4 +105,9 @@ public class OrderDto {
         private long todayTickets;
         private BigDecimal todayRevenue;
     }
+
+    @Data
+    public static class UpdateTicketStatusRequest {
+        private String status;
+    }
 }

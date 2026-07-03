@@ -1,0 +1,46 @@
+/* Pagination — uses design tokens from globals.css */
+.a-pagination {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  justify-content: center;
+  margin-top: var(--sp-4);
+}
+
+.pg-btn {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--r-md);
+  background: var(--white);
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: var(--gray-700);
+  transition: all var(--tr-fast);
+}
+
+.pg-btn:hover:not(:disabled) {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.pg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pg-active {
+  background: var(--primary);
+  color: var(--white);
+  border-color: var(--primary);
+  font-weight: 700;
+}
+
+.pg-active:hover {
+  background: var(--primary-dark);
+  color: var(--white);
+}

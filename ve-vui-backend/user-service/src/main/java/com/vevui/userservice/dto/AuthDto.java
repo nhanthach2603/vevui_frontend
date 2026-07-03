@@ -72,4 +72,9 @@ public class AuthDto {
         @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$")
         private String phone;
     }
+
+    @Data
+    public static class UpdateUserStatusRequest {
+        private String status;
+    }
 }

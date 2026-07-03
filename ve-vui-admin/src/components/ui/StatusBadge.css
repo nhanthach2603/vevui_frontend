@@ -1,0 +1,20 @@
+/* StatusBadge — extends a-badge from globals.css */
+.a-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.a-badge-green  { background: var(--success-bg); color: #15803D; }
+.a-badge-orange { background: var(--warning-bg); color: #92400E; }
+.a-badge-red    { background: var(--danger-bg);  color: #991B1B; }
+.a-badge-gray   { background: var(--gray-100);   color: var(--gray-600); }
+.a-badge-blue   { background: var(--primary-bg); color: var(--primary-dark); }
+.a-badge-purple { background: var(--purple-bg);  color: #5B21B6; }

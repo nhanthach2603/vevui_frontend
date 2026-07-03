@@ -56,6 +56,23 @@ public class NewsController {
         return ResponseEntity.ok(Map.of("message", "Bài viết đã được xóa"));
     }
 
+    @GetMapping("/api/admin/news")
+    public ResponseEntity<Page<NewsDto.NewsResponse>> getAllAdmin(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(newsService.getAllAdmin(PageRequest.of(page, size)));
+    }
+
+    @PutMapping("/api/admin/news/{id}/publish")
+    public ResponseEntity<NewsDto.NewsResponse> publish(@PathVariable Long id) {
+        return ResponseEntity.ok(newsService.updatePublishStatus(id, true));
+    }
+
+    @PutMapping("/api/admin/news/{id}/draft")
+    public ResponseEntity<NewsDto.NewsResponse> unpublish(@PathVariable Long id) {
+        return ResponseEntity.ok(newsService.updatePublishStatus(id, false));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Map<String, String>> handleError(IllegalArgumentException ex) {
         return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));

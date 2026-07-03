@@ -143,4 +143,25 @@ public class TripDto {
         private int availableSeats;
         private List<List<SeatDto>> seatRows;
     }
+
+    @Data
+    public static class UpdateTripStatusRequest {
+        private String status;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TripStatsResponse {
+        private long total;
+        private long active;
+        private long cancelled;
+        private long completed;
+    }
+
+    @Data
+    public static class UpdateBusStatusRequest {
+        private String status;
+    }
 }

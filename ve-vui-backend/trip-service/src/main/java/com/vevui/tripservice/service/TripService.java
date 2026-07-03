@@ -328,6 +328,42 @@ public class TripService {
                 .build();
     }
 
+    // ── Admin: Trip Status ──
+
+    @CacheEvict(value = "trips", allEntries = true)
+    public TripDto.TripResponse updateTripStatus(Long id, String status) {
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyến: " + id));
+        trip.setStatus(Trip.Status.valueOf(status));
+        return toTripResponse(tripRepository.save(trip));
+    }
+
+    public TripDto.TripStatsResponse getTripStats() {
+        List<Trip> all = tripRepository.findAll();
+        return TripDto.TripStatsResponse.builder()
+                .total(all.size())
+                .active(all.stream().filter(t -> t.getStatus() == Trip.Status.SCHEDULED).count())
+                .cancelled(all.stream().filter(t -> t.getStatus() == Trip.Status.CANCELLED).count())
+                .completed(all.stream().filter(t -> t.getStatus() == Trip.Status.COMPLETED).count())
+                .build();
+    }
+
+    // ── Admin: Bus Detail & Status ──
+
+    public TripDto.BusDto getBusById(Long id) {
+        Bus bus = busRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy xe: " + id));
+        return toBusDto(bus);
+    }
+
+    @CacheEvict(value = "trips", allEntries = true)
+    public TripDto.BusDto updateBusStatus(Long id, String status) {
+        Bus bus = busRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy xe: " + id));
+        bus.setStatus(Bus.Status.valueOf(status));
+        return toBusDto(busRepository.save(bus));
+    }
+
     // ── Private helpers ──
 
     private List<String> parseSeats(String json) {

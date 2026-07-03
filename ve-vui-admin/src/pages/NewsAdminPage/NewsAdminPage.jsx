@@ -1,8 +1,9 @@
 // pages/NewsAdminPage/NewsAdminPage.jsx
 import { useEffect, useState } from 'react';
-import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiFileText, FiTag } from 'react-icons/fi';
+import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiFileText, FiTag, FiEye, FiCheck, FiX } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { fetchNews, createNews, updateNews, deleteNews } from '../../services/apiService';
+import { fetchNewsAdmin, createNews, updateNews, deleteNews, publishNews, unpublishNews } from '../../services/apiService';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 const initialCategories = ['Khuyến mãi', 'Tin tức', 'Hướng dẫn', 'Du lịch', 'Thông báo'];
 
@@ -15,8 +16,11 @@ const NewsAdminPage = () => {
   const [showModal, setModal]             = useState(false);
   const [editItem, setEdit]               = useState(null);
   const [deleteId, setDeleteId]           = useState(null);
-  const [form, setForm]                   = useState({ title:'', excerpt:'', category:'Tin tức', author:'Admin', status:'draft' });
+  const [form, setForm]                   = useState({ title:'', excerpt:'', content:'', category:'Tin tức', author:'Admin', status:'draft' });
   const [saving, setSaving]               = useState(false);
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [showDetail, setShowDetail]       = useState(false);
+  const [detailItem, setDetailItem]       = useState(null);
 
   const [catForm, setCatForm]             = useState('');
   const [editCatIdx, setEditCatIdx]       = useState(null);
@@ -26,13 +30,14 @@ const NewsAdminPage = () => {
   useEffect(() => { document.title = 'Tin tức | Vé Vui Admin'; }, []);
 
   useEffect(() => {
-    fetchNews(0, 100).then(data => {
+    fetchNewsAdmin(0, 100).then(data => {
       // Backend may return Page<Article> or array
       const items = data?.content || (Array.isArray(data) ? data : []);
       const mapped = items.map(n => ({
         id: n.id,
         title: n.title,
         excerpt: n.excerpt || n.summary || '',
+        content: n.content || n.body || '',
         category: n.category || 'Tin tức',
         author: n.author || 'Admin',
         status: n.published ? 'published' : (n.status || 'draft'),
@@ -46,17 +51,18 @@ const NewsAdminPage = () => {
 
   // ── News ──
   const filteredNews = news.filter(n =>
-    n.title.toLowerCase().includes(search.toLowerCase()) ||
-    n.category.toLowerCase().includes(search.toLowerCase())
+    (n.title.toLowerCase().includes(search.toLowerCase()) ||
+    n.category.toLowerCase().includes(search.toLowerCase())) &&
+    (filterCategory === 'all' || n.category === filterCategory)
   );
 
-  const openAdd  = () => { setEdit(null); setForm({ title:'', excerpt:'', category: categories[0] || 'Tin tức', author:'Admin', status:'draft' }); setModal(true); };
-  const openEdit = (n) => { setEdit(n); setForm({ title:n.title, excerpt:n.excerpt||'', category:n.category, author:n.author, status:n.status }); setModal(true); };
+  const openAdd  = () => { setEdit(null); setForm({ title:'', excerpt:'', content:'', category: categories[0] || 'Tin tức', author:'Admin', status:'draft' }); setModal(true); };
+  const openEdit = (n) => { setEdit(n); setForm({ title:n.title, excerpt:n.excerpt||'', content:n.content||'', category:n.category, author:n.author, status:n.status }); setModal(true); };
 
   const handleSaveNews = async () => {
     if (!form.title.trim()) return;
     setSaving(true);
-    const body = { title: form.title, excerpt: form.excerpt, category: form.category, author: form.author, published: form.status === 'published' };
+    const body = { title: form.title, excerpt: form.excerpt, content: form.content, category: form.category, author: form.author, published: form.status === 'published' };
     try {
       if (editItem) {
         await updateNews(editItem.id, body);
@@ -78,6 +84,20 @@ const NewsAdminPage = () => {
     } catch (e) { alert('Lỗi: ' + e.message); }
     setDeleteId(null);
   };
+
+  const handleTogglePublish = async (n) => {
+    try {
+      if (n.status === 'published') {
+        await unpublishNews(n.id);
+        setNews(ns => ns.map(item => item.id === n.id ? { ...item, status: 'draft' } : item));
+      } else {
+        await publishNews(n.id);
+        setNews(ns => ns.map(item => item.id === n.id ? { ...item, status: 'published' } : item));
+      }
+    } catch (e) { alert('Lỗi: ' + e.message); }
+  };
+
+  const openDetail = (n) => { setDetailItem(n); setShowDetail(true); };
 
   // ── Categories ──
   const openAddCat  = () => { setEditCatIdx(null); setCatForm(''); setCatModal(true); };
@@ -139,9 +159,13 @@ const NewsAdminPage = () => {
 
           <div className="a-card" style={{ marginBottom:'var(--sp-5)' }}>
             <div className="a-card-body" style={{ padding:'1rem 1.5rem' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, maxWidth:400 }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, maxWidth:600 }}>
                 <FiSearch style={{ color:'var(--gray-400)', flexShrink:0 }} />
-                <input className="a-input" placeholder="Tìm bài viết..." value={search} onChange={e=>setSearch(e.target.value)} id="news-search" style={{ border:'none', boxShadow:'none', padding:'4px 0' }} />
+                <input className="a-input" placeholder="Tìm bài viết..." value={search} onChange={e=>setSearch(e.target.value)} id="news-search" style={{ border:'none', boxShadow:'none', padding:'4px 0', flex:1 }} />
+                <select className="a-input a-select" value={filterCategory} onChange={e=>setFilterCategory(e.target.value)} id="news-category-filter" style={{ width:180, flexShrink:0 }}>
+                  <option value="all">Tất cả danh mục</option>
+                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -165,12 +189,14 @@ const NewsAdminPage = () => {
                       <td>{new Date(n.publishedAt).toLocaleDateString('vi-VN')}</td>
                       <td style={{ fontWeight:600 }}>{n.views.toLocaleString()}</td>
                       <td>
-                        <span className={`a-badge ${n.status==='published'?'a-badge-green':'a-badge-orange'}`}>
-                          {n.status==='published'?'Đã xuất bản':'Nháp'}
-                        </span>
+                        <StatusBadge status={n.status === 'published' ? 'PUBLISHED' : 'DRAFT'} />
                       </td>
                       <td>
                         <div style={{ display:'flex', gap:5 }}>
+                          <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => openDetail(n)} title="Xem" id={`view-news-${n.id}`}><FiEye size={14}/></button>
+                          <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => handleTogglePublish(n)} title={n.status === 'published' ? 'Gỡ xuống' : 'Xuất bản'} id={`toggle-publish-${n.id}`} style={{ color: n.status === 'published' ? 'var(--warning)' : 'var(--success)' }}>
+                            {n.status === 'published' ? <FiX size={14}/> : <FiCheck size={14}/>}
+                          </button>
                           <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => openEdit(n)} id={`edit-news-${n.id}`}><FiEdit2 size={14}/></button>
                           <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => setDeleteId(n.id)} style={{ color:'var(--danger)' }} id={`delete-news-${n.id}`}><FiTrash2 size={14}/></button>
                         </div>
@@ -237,6 +263,16 @@ const NewsAdminPage = () => {
                 <label className="a-label">Mô tả ngắn</label>
                 <textarea className="a-input" rows={3} placeholder="Mô tả nội dung bài viết..." value={form.excerpt} onChange={e=>setForm(f=>({...f,excerpt:e.target.value}))} id="news-excerpt" style={{ resize:'vertical' }} />
               </div>
+              <div className="a-form-group">
+                <label className="a-label">Nội dung (HTML)</label>
+                <textarea className="a-input" rows={6} placeholder="Nhập nội dung bài viết (hỗ trợ HTML)..." value={form.content} onChange={e=>setForm(f=>({...f,content:e.target.value}))} id="news-content" style={{ resize:'vertical', fontFamily:'monospace', fontSize:'0.85rem' }} />
+              </div>
+              {form.content && (
+                <div className="a-form-group">
+                  <label className="a-label">Xem trước nội dung</label>
+                  <div className="news-preview-content" dangerouslySetInnerHTML={{ __html: form.content }} style={{ border:'1px solid var(--gray-200)', borderRadius:'var(--r-md)', padding:'1rem', maxHeight:300, overflow:'auto', background:'var(--gray-50)', fontSize:'0.9rem', lineHeight:1.7 }} />
+                </div>
+              )}
               <div className="grid-2">
                 <div className="a-form-group">
                   <label className="a-label">Danh mục</label>
@@ -273,6 +309,37 @@ const NewsAdminPage = () => {
             <div className="modal-footer">
               <button className="a-btn a-btn-ghost" onClick={() => setDeleteId(null)}>Hủy</button>
               <button className="a-btn a-btn-danger" onClick={() => handleDeleteNews(deleteId)} id="confirm-delete-news">Xóa</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════ DETAIL MODAL ══════ */}
+      {showDetail && detailItem && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setShowDetail(false)}>
+          <div className="modal-box" style={{ maxWidth:700 }}>
+            <div className="modal-header">
+              <div className="modal-title">{detailItem.title}</div>
+              <button className="modal-close" onClick={() => setShowDetail(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display:'flex', gap:8, marginBottom:'var(--sp-4)', flexWrap:'wrap', alignItems:'center' }}>
+                <StatusBadge status={detailItem.status === 'published' ? 'PUBLISHED' : 'DRAFT'} />
+                <span className="a-badge a-badge-blue">{detailItem.category}</span>
+                <span style={{ fontSize:'0.82rem', color:'var(--gray-400)' }}>{detailItem.author} · {new Date(detailItem.publishedAt).toLocaleDateString('vi-VN')} · {detailItem.views.toLocaleString()} lượt xem</span>
+              </div>
+              {detailItem.excerpt && (
+                <p style={{ color:'var(--gray-600)', fontStyle:'italic', marginBottom:'var(--sp-4)' }}>{detailItem.excerpt}</p>
+              )}
+              {detailItem.content ? (
+                <div className="news-detail-content" dangerouslySetInnerHTML={{ __html: detailItem.content }} style={{ lineHeight:1.8, fontSize:'0.92rem' }} />
+              ) : (
+                <p style={{ color:'var(--gray-400)', fontStyle:'italic' }}>Không có nội dung chi tiết</p>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="a-btn a-btn-ghost" onClick={() => setShowDetail(false)}>Đóng</button>
+              <button className="a-btn a-btn-primary" onClick={() => { setShowDetail(false); openEdit(detailItem); }} id="detail-edit-btn"><FiEdit2 size={14}/> Chỉnh sửa</button>
             </div>
           </div>
         </div>

@@ -209,6 +209,33 @@ public class OrderService {
                 .build();
     }
 
+    // ── Admin: Ticket Operations ──
+
+    public List<OrderDto.TicketResponse> searchTicketsAdmin(String q) {
+        String lower = q.toLowerCase();
+        return ticketRepository.findAll().stream()
+                .filter(t -> (t.getCustomerName() != null && t.getCustomerName().toLowerCase().contains(lower))
+                        || (t.getPhone() != null && t.getPhone().contains(lower))
+                        || (t.getId() != null && t.getId().toLowerCase().contains(lower)))
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public OrderDto.TicketResponse updateTicketStatus(String id, String status) {
+        Ticket ticket = ticketRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy vé: " + id));
+        ticket.setStatus(Ticket.Status.valueOf(status));
+        log.info("Ticket {} status updated to {}", id, status);
+        return toResponse(ticketRepository.save(ticket));
+    }
+
+    public List<OrderDto.TicketResponse> exportTickets() {
+        return ticketRepository.findAll().stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     // ── Private Helpers ──
 
     private String generateTicketId() {

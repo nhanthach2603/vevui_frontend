@@ -66,6 +66,31 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getStats());
     }
 
+    // ── Admin: Ticket Detail & Status ──
+
+    @GetMapping("/api/admin/tickets/{id}")
+    public ResponseEntity<OrderDto.TicketResponse> getTicketByIdAdmin(@PathVariable String id) {
+        return ResponseEntity.ok(orderService.getTicketById(id));
+    }
+
+    @GetMapping("/api/admin/tickets/search")
+    public ResponseEntity<List<OrderDto.TicketResponse>> searchTicketsAdmin(
+            @RequestParam String q) {
+        return ResponseEntity.ok(orderService.searchTicketsAdmin(q));
+    }
+
+    @PutMapping("/api/admin/tickets/{id}/status")
+    public ResponseEntity<OrderDto.TicketResponse> updateTicketStatus(
+            @PathVariable String id,
+            @RequestBody OrderDto.UpdateTicketStatusRequest req) {
+        return ResponseEntity.ok(orderService.updateTicketStatus(id, req.getStatus()));
+    }
+
+    @GetMapping("/api/admin/tickets/export")
+    public ResponseEntity<List<OrderDto.TicketResponse>> exportTickets() {
+        return ResponseEntity.ok(orderService.exportTickets());
+    }
+
     // ── Payment Endpoints ──
 
     @PostMapping("/api/payment/process")

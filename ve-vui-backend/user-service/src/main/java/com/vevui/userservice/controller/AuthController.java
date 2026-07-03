@@ -73,6 +73,32 @@ public class AuthController {
         return ResponseEntity.ok(userService.getAllUsers(PageRequest.of(page, size)));
     }
 
+    @GetMapping("/api/admin/users/{id}")
+    public ResponseEntity<AuthDto.UserDto> getUserByIdAdmin(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserById(id));
+    }
+
+    @PutMapping("/api/admin/users/{id}/status")
+    public ResponseEntity<AuthDto.UserDto> updateUserStatus(
+            @PathVariable Long id,
+            @RequestBody AuthDto.UpdateUserStatusRequest req) {
+        return ResponseEntity.ok(userService.updateUserStatus(id, req.getStatus()));
+    }
+
+    @DeleteMapping("/api/admin/users/{id}")
+    public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return ResponseEntity.ok(Map.of("message", "Người dùng đã được xóa"));
+    }
+
+    @GetMapping("/api/admin/users/search")
+    public ResponseEntity<Page<AuthDto.UserDto>> searchUsers(
+            @RequestParam String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size) {
+        return ResponseEntity.ok(userService.searchUsers(q, PageRequest.of(page, size)));
+    }
+
     // ── Global error handler ──
 
     @ExceptionHandler(IllegalArgumentException.class)

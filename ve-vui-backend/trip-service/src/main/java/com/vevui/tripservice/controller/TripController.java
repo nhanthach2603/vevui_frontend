@@ -187,6 +187,39 @@ public class TripController {
         return ResponseEntity.ok(Map.of("message", "Chuyến đi đã được hủy"));
     }
 
+    // ── Admin: Trip Detail & Status ──
+
+    @GetMapping("/api/admin/trips/{id}")
+    public ResponseEntity<TripDto.TripResponse> getTripByIdAdmin(@PathVariable Long id) {
+        return ResponseEntity.ok(tripService.getTripById(id));
+    }
+
+    @PutMapping("/api/admin/trips/{id}/status")
+    public ResponseEntity<TripDto.TripResponse> updateTripStatus(
+            @PathVariable Long id,
+            @RequestBody TripDto.UpdateTripStatusRequest req) {
+        return ResponseEntity.ok(tripService.updateTripStatus(id, req.getStatus()));
+    }
+
+    @GetMapping("/api/admin/trips/stats")
+    public ResponseEntity<TripDto.TripStatsResponse> getTripStats() {
+        return ResponseEntity.ok(tripService.getTripStats());
+    }
+
+    // ── Admin: Bus Detail & Status ──
+
+    @GetMapping("/api/admin/buses/{id}")
+    public ResponseEntity<TripDto.BusDto> getBusByIdAdmin(@PathVariable Long id) {
+        return ResponseEntity.ok(tripService.getBusById(id));
+    }
+
+    @PutMapping("/api/admin/buses/{id}/status")
+    public ResponseEntity<TripDto.BusDto> updateBusStatus(
+            @PathVariable Long id,
+            @RequestBody TripDto.UpdateBusStatusRequest req) {
+        return ResponseEntity.ok(tripService.updateBusStatus(id, req.getStatus()));
+    }
+
     // ── Error Handler ──
 
     @ExceptionHandler(IllegalArgumentException.class)

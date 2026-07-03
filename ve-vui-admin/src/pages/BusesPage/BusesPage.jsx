@@ -2,11 +2,12 @@
 import { useEffect, useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiTruck, FiGrid, FiAlertTriangle, FiClock, FiX } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { fetchBuses, createBus, updateBus, deleteBus, fetchBusTypes, createBusType, updateBusType, deleteBusType } from '../../services/apiService';
+import { fetchBuses, createBus, updateBus, deleteBus, fetchBusTypes, createBusType, updateBusType, deleteBusType, fetchBusById, updateBusStatus } from '../../services/apiService';
+import StatusBadge from '../../components/ui/StatusBadge';
 
 
 const isPenalized = (b) => {
-  if (!b.violationExpiry) return false;
+  if (!b || !b.violationExpiry) return false;
   return new Date(b.violationExpiry) >= new Date(new Date().toDateString());
 };
 
@@ -34,6 +35,9 @@ const BusesPage = () => {
   const [penaltyBus, setPenaltyBus]       = useState(null);
   const [penaltyForm, setPenaltyForm]     = useState({ violationDate:'', violationExpiry:'', violationReason:'' });
   const [showPenaltyDetail, setShowPenaltyDetail] = useState(null);
+  const [typeFilter, setTypeFilter]       = useState('all');
+  const [statusChangeBus, setStatusChangeBus] = useState(null);
+  const [newStatus, setNewStatus]         = useState('');
 
   useEffect(() => { document.title = 'Quản lý xe | Vé Vui Admin'; }, []);
 
@@ -50,8 +54,9 @@ const BusesPage = () => {
 
   // ── Bus functions ──
   const filteredBuses = buses.filter(b =>
-    b.plateNumber.toLowerCase().includes(search.toLowerCase()) ||
-    b.description?.toLowerCase().includes(search.toLowerCase())
+    (b.plateNumber.toLowerCase().includes(search.toLowerCase()) ||
+    b.description?.toLowerCase().includes(search.toLowerCase())) &&
+    (typeFilter === 'all' || String(b.busTypeId) === typeFilter)
   );
 
   const openAdd  = () => { setEdit(null); setForm({ plateNumber:'', typeId: busTypes[0]?.id || '', status:'ACTIVE', name:'' }); setModal(true); };
@@ -78,6 +83,21 @@ const BusesPage = () => {
       setBuses(bs => bs.filter(b => b.id !== id));
     } catch (e) { alert('Lỗi: ' + e.message); }
     setDeleteId(null);
+  };
+
+  const openStatusChange = (b) => {
+    setStatusChangeBus(b);
+    setNewStatus(b.status);
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!statusChangeBus || !newStatus) return;
+    try {
+      const updated = await updateBusStatus(statusChangeBus.id, newStatus);
+      setBuses(bs => bs.map(b => b.id === statusChangeBus.id ? { ...b, status: newStatus } : b));
+      setStatusChangeBus(null);
+      setNewStatus('');
+    } catch (e) { alert('Lỗi cập nhật trạng thái: ' + e.message); }
   };
 
   // ── Penalty functions ──
@@ -209,9 +229,18 @@ const BusesPage = () => {
           {/* Search */}
           <div className="a-card" style={{ marginBottom:'var(--sp-5)' }}>
             <div className="a-card-body" style={{ padding:'1rem 1.5rem' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, maxWidth:360 }}>
-                <FiSearch style={{ color:'var(--gray-400)', flexShrink:0 }} />
-                <input className="a-input" placeholder="Tìm xe..." value={search} onChange={e=>setSearch(e.target.value)} id="bus-search" style={{ border:'none', boxShadow:'none', padding:'4px 0', fontSize:'0.9rem' }} />
+              <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:200, maxWidth:360 }}>
+                  <FiSearch style={{ color:'var(--gray-400)', flexShrink:0 }} />
+                  <input className="a-input" placeholder="Tìm xe..." value={search} onChange={e=>setSearch(e.target.value)} id="bus-search" style={{ border:'none', boxShadow:'none', padding:'4px 0', fontSize:'0.9rem', flex:1 }} />
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <label style={{ fontSize:'0.85rem', color:'var(--gray-500)', fontWeight:600, whiteSpace:'nowrap' }}>Loại xe:</label>
+                  <select className="a-input a-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)} id="bus-type-filter" style={{ minWidth:160, fontSize:'0.85rem' }}>
+                    <option value="all">Tất cả</option>
+                    {busTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -240,7 +269,7 @@ const BusesPage = () => {
                         <td>{bt?.seats || '—'} chỗ</td>
                         <td style={{ color:'var(--gray-500)' }}>{b.name}</td>
                         <td>
-                          <span className={`a-badge ${st.cls}`}>{st.label}</span>
+                          <StatusBadge status={b.status?.toUpperCase()} />
                           {penalized && (
                             <div style={{ fontSize:'0.72rem', color:'var(--danger)', marginTop:2, fontWeight:600 }}>
                               Hết hạn: {new Date(b.violationExpiry).toLocaleDateString('vi-VN')}
@@ -250,6 +279,9 @@ const BusesPage = () => {
                         <td>
                           <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                             <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => openEdit(b)} title="Chỉnh sửa" id={`edit-bus-${b.id}`}><FiEdit2 size={14}/></button>
+                            <button className="a-btn a-btn-ghost a-btn-sm" onClick={() => openStatusChange(b)} title="Đổi trạng thái" id={`change-status-${b.id}`} style={{ fontSize:'0.78rem', color:'var(--primary)' }}>
+                              Đổi trạng thái
+                            </button>
                             <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => openPenalty(b)} title="Xử lý vi phạm" style={penalized ? { color:'var(--danger)' } : {}} id={`penalty-bus-${b.id}`}>
                               {penalized ? <FiAlertTriangle size={14}/> : <FiClock size={14}/>}
                             </button>
@@ -415,6 +447,32 @@ const BusesPage = () => {
                 <button className="a-btn a-btn-ghost" onClick={() => setPenaltyBus(null)}>Đóng</button>
                 <button className="a-btn a-btn-primary" onClick={handleSavePenalty} id="save-penalty">Lưu</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════ CHANGE STATUS MODAL ══════ */}
+      {statusChangeBus && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setStatusChangeBus(null)}>
+          <div className="modal-box" style={{ maxWidth:420 }}>
+            <div className="modal-header">
+              <div className="modal-title">Đổi trạng thái — {statusChangeBus.plateNumber}</div>
+              <button className="modal-close" onClick={() => setStatusChangeBus(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="a-form-group">
+                <label className="a-label">Trạng thái mới</label>
+                <select className="a-input a-select" value={newStatus} onChange={e => setNewStatus(e.target.value)} id="status-change-select">
+                  <option value="active">Hoạt động</option>
+                  <option value="maintenance">Bảo dưỡng</option>
+                  <option value="inactive">Ngừng hoạt động</option>
+                </select>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="a-btn a-btn-ghost" onClick={() => setStatusChangeBus(null)}>Hủy</button>
+              <button className="a-btn a-btn-primary" onClick={handleUpdateStatus} id="confirm-status-change">Xác nhận</button>
             </div>
           </div>
         </div>

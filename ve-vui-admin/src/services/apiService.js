@@ -60,19 +60,38 @@ export const fetchTrips  = (page = 0, size = 50) => apiFetch(`/api/admin/trips?p
 export const createTrip  = (body) => apiFetch('/api/admin/trips', { method: 'POST', body: JSON.stringify(body) });
 export const updateTrip  = (id, body) => apiFetch(`/api/admin/trips/${id}`, { method: 'PUT', body: JSON.stringify(body) });
 export const deleteTrip  = (id) => apiFetch(`/api/admin/trips/${id}`, { method: 'DELETE' });
+export const fetchTripById    = (id) => apiFetch(`/api/admin/trips/${id}`);
+export const updateTripStatus = (id, status) => apiFetch(`/api/admin/trips/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+export const fetchTripStats   = () => apiFetch('/api/admin/trips/stats');
+
+// ── Buses (new) ──
+export const fetchBusById     = (id) => apiFetch(`/api/admin/buses/${id}`);
+export const updateBusStatus  = (id, status) => apiFetch(`/api/admin/buses/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
 
 // ── Tickets ──
 export const fetchTickets = (page = 0, size = 50) => apiFetch(`/api/admin/tickets?page=${page}&size=${size}`);
 export const cancelTicket = (id) => apiFetch(`/api/tickets/${id}/cancel`, { method: 'PUT' });
+export const fetchTicketById  = (id) => apiFetch(`/api/admin/tickets/${id}`);
+export const searchTicketsAdmin = (q) => apiFetch(`/api/admin/tickets/search?q=${encodeURIComponent(q)}`);
+export const updateTicketStatus = (id, status) => apiFetch(`/api/admin/tickets/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+export const exportTickets    = () => apiFetch('/api/admin/tickets/export');
 
 // ── Users / Customers ──
 export const fetchUsers  = (page = 0, size = 100) => apiFetch(`/api/admin/users?page=${page}&size=${size}`);
+export const fetchUserById    = (id) => apiFetch(`/api/admin/users/${id}`);
+export const searchUsers      = (q) => apiFetch(`/api/admin/users/search?q=${encodeURIComponent(q)}`);
+export const updateUserStatus = (id, status) => apiFetch(`/api/admin/users/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
+export const deleteUser       = (id) => apiFetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+export const fetchUserTickets = (id) => apiFetch(`/api/tickets/search?customerId=${id}`);
 
 // ── News ──
 export const fetchNews   = (page = 0, size = 50) => apiFetch(`/api/news?page=${page}&size=${size}`);
+export const fetchNewsAdmin   = (page = 0, size = 50) => apiFetch(`/api/admin/news?page=${page}&size=${size}`);
 export const createNews  = (body) => apiFetch('/api/admin/news', { method: 'POST', body: JSON.stringify(body) });
 export const updateNews  = (id, body) => apiFetch(`/api/admin/news/${id}`, { method: 'PUT', body: JSON.stringify(body) });
 export const deleteNews  = (id) => apiFetch(`/api/admin/news/${id}`, { method: 'DELETE' });
+export const publishNews      = (id) => apiFetch(`/api/admin/news/${id}/publish`, { method: 'PUT' });
+export const unpublishNews    = (id) => apiFetch(`/api/admin/news/${id}/draft`, { method: 'PUT' });
 
 // ── Format helpers ──
 export const formatPrice = (p) =>

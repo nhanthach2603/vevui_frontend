@@ -1,0 +1,57 @@
+/* ConfirmDialog — uses design tokens from globals.css */
+.cd-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+.cd-modal {
+  background: var(--white);
+  border-radius: var(--r-xl);
+  padding: var(--sp-8);
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: var(--sh-lg);
+}
+
+.cd-icon {
+  font-size: 2rem;
+  margin-bottom: var(--sp-3);
+}
+
+.cd-message {
+  font-size: 0.95rem;
+  color: var(--gray-700);
+  margin-bottom: var(--sp-6);
+  line-height: 1.5;
+}
+
+.cd-actions {
+  display: flex;
+  gap: var(--sp-3);
+  justify-content: center;
+}
+
+.cd-cancel {
+  padding: 8px 20px;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.cd-cancel:hover {
+  background: var(--gray-200);
+}
+
+.cd-confirm {
+  padding: 8px 20px;
+}

@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageImpl;
 
 @Slf4j
 @Service
@@ -107,6 +111,41 @@ public class UserService {
 
     public Page<AuthDto.UserDto> getAllUsers(Pageable pageable) {
         return userRepository.findAll(pageable).map(this::toUserDto);
+    }
+
+    // ── Admin: User Management ──
+
+    @Transactional
+    public AuthDto.UserDto updateUserStatus(Long id, String status) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user: " + id));
+        if ("BANNED".equals(status)) {
+            user.setEnabled(false);
+        } else {
+            user.setEnabled(true);
+        }
+        return toUserDto(userRepository.save(user));
+    }
+
+    @Transactional
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user: " + id));
+        user.setEnabled(false);
+        userRepository.save(user);
+        log.info("User {} soft-deleted (disabled)", id);
+    }
+
+    public Page<AuthDto.UserDto> searchUsers(String q, Pageable pageable) {
+        // Get all users and filter (works for small admin datasets)
+        Page<AuthDto.UserDto> all = userRepository.findAll(pageable).map(this::toUserDto);
+        String lower = q.toLowerCase();
+        List<AuthDto.UserDto> filtered = all.getContent().stream()
+                .filter(dto -> (dto.getFullName() != null && dto.getFullName().toLowerCase().contains(lower))
+                        || (dto.getEmail() != null && dto.getEmail().toLowerCase().contains(lower))
+                        || (dto.getPhone() != null && dto.getPhone().contains(lower)))
+                .collect(Collectors.toList());
+        return new PageImpl<>(filtered, pageable, filtered.size());
     }
 
     private AuthDto.AuthResponse buildAuthResponse(User user, String refreshToken) {

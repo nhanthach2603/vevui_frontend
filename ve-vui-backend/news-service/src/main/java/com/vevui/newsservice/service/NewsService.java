@@ -83,6 +83,23 @@ public class NewsService {
         newsRepository.save(news);
     }
 
+    // ── Admin: News Management ──
+
+    public Page<NewsDto.NewsResponse> getAllAdmin(Pageable pageable) {
+        return newsRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    @CacheEvict(value = {"news-list", "news-featured"}, allEntries = true)
+    public NewsDto.NewsResponse updatePublishStatus(Long id, boolean published) {
+        News news = newsRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bài viết: " + id));
+        news.setPublished(published);
+        if (published) {
+            news.setPublishedAt(java.time.LocalDateTime.now());
+        }
+        return toResponse(newsRepository.save(news));
+    }
+
     private NewsDto.NewsResponse toResponse(News n) {
         NewsDto.NewsResponse dto = new NewsDto.NewsResponse();
         dto.setId(n.getId());
