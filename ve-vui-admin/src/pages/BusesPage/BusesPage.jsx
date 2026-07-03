@@ -2,7 +2,8 @@
 import { useEffect, useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiTruck, FiGrid, FiAlertTriangle, FiClock, FiX } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { buses as initialBuses, busTypes as initialBusTypes } from '../../services/adminData';
+import { fetchBuses, createBus, updateBus, deleteBus, fetchBusTypes, createBusType, updateBusType, deleteBusType } from '../../services/apiService';
+
 
 const isPenalized = (b) => {
   if (!b.violationExpiry) return false;
@@ -18,8 +19,9 @@ const STATUS_COLORS = {
 
 const BusesPage = () => {
   const [tab, setTab]                     = useState('buses');
-  const [buses, setBuses]                 = useState(initialBuses);
-  const [busTypes, setBusTypes]           = useState(initialBusTypes);
+  const [buses, setBuses]                 = useState([]);
+  const [busTypes, setBusTypes]           = useState([]);
+  const [loading, setLoading]             = useState(true);
   const [search, setSearch]               = useState('');
   const [showModal, setModal]             = useState(false);
   const [editItem, setEdit]               = useState(null);
@@ -35,26 +37,48 @@ const BusesPage = () => {
 
   useEffect(() => { document.title = 'Quản lý xe | Vé Vui Admin'; }, []);
 
+  useEffect(() => {
+    Promise.all([
+      fetchBuses().catch(() => ({ content: [] })),
+      fetchBusTypes().catch(() => []),
+    ]).then(([busesData, typesData]) => {
+      setBuses(busesData?.content || []);
+      setBusTypes(Array.isArray(typesData) ? typesData : []);
+      setLoading(false);
+    });
+  }, []);
+
   // ── Bus functions ──
   const filteredBuses = buses.filter(b =>
     b.plateNumber.toLowerCase().includes(search.toLowerCase()) ||
     b.description?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const openAdd  = () => { setEdit(null); setForm({ plateNumber:'', typeId: busTypes[0]?.id || '', status:'active', description:'' }); setModal(true); };
-  const openEdit = (b) => { setEdit(b); setForm({ plateNumber:b.plateNumber, typeId:b.typeId, status: isPenalized(b) ? 'active' : b.status, description:b.description||'' }); setModal(true); };
+  const openAdd  = () => { setEdit(null); setForm({ plateNumber:'', typeId: busTypes[0]?.id || '', status:'ACTIVE', name:'' }); setModal(true); };
+  const openEdit = (b) => { setEdit(b); setForm({ plateNumber:b.plateNumber, typeId:b.busTypeId || '', status: isPenalized(b) ? b.status : b.status, name:b.name||'' }); setModal(true); };
 
-  const handleSaveBus = () => {
+  const handleSaveBus = async () => {
     if (!form.plateNumber.trim()) return;
-    if (editItem) {
-      setBuses(bs => bs.map(b => b.id === editItem.id ? { ...b, ...form } : b));
-    } else {
-      setBuses(bs => [...bs, { id: `bus${Date.now()}`, ...form }]);
-    }
-    setModal(false);
+    const body = { plateNumber: form.plateNumber, name: form.name || form.plateNumber, busTypeId: Number(form.typeId) };
+    try {
+      if (editItem) {
+        const updated = await updateBus(editItem.id, body);
+        setBuses(bs => bs.map(b => b.id === editItem.id ? updated : b));
+      } else {
+        const created = await createBus(body);
+        setBuses(bs => [...bs, created]);
+      }
+      setModal(false);
+    } catch (e) { alert('Lỗi: ' + e.message); }
   };
 
-  const handleDeleteBus = (id) => { setBuses(bs => bs.filter(b => b.id !== id)); setDeleteId(null); };
+  const handleDeleteBus = async (id) => {
+    try {
+      await deleteBus(id);
+      setBuses(bs => bs.filter(b => b.id !== id));
+    } catch (e) { alert('Lỗi: ' + e.message); }
+    setDeleteId(null);
+  };
 
   // ── Penalty functions ──
   const openPenalty = (b) => {
@@ -100,24 +124,31 @@ const BusesPage = () => {
   );
 
   const openAddType  = () => { setEditType(null); setTypeForm({ name:'', code:'', seats:'' }); setTypeModal(true); };
-  const openEditType = (t) => { setEditType(t); setTypeForm({ name:t.name, code:t.code, seats:String(t.seats) }); setTypeModal(true); };
+  const openEditType = (t) => { setEditType(t); setTypeForm({ name:t.name, code:t.code, seats:String(t.totalSeats) }); setTypeModal(true); };
 
-  const handleSaveType = () => {
+  const handleSaveType = async () => {
     if (!typeForm.name.trim() || !typeForm.seats) return;
     const seats = parseInt(typeForm.seats, 10);
     if (isNaN(seats) || seats < 1) return;
-    if (editType) {
-      setBusTypes(ts => ts.map(t => t.id === editType.id ? { ...t, name: typeForm.name, code: typeForm.code.toUpperCase(), seats } : t));
-    } else {
-      setBusTypes(ts => [...ts, { id: `bt${Date.now()}`, name: typeForm.name, code: typeForm.code.toUpperCase() || `TYPE_${Date.now()}`, seats }]);
-    }
-    setTypeModal(false);
+    try {
+      if (editType) {
+        const updated = await updateBusType(editType.id, { name: typeForm.name, code: typeForm.code.toUpperCase(), totalSeats: seats });
+        setBusTypes(ts => ts.map(t => t.id === editType.id ? updated : t));
+      } else {
+        const created = await createBusType({ name: typeForm.name, code: typeForm.code.toUpperCase() || `TYPE_${Date.now()}`, totalSeats: seats });
+        setBusTypes(ts => [...ts, created]);
+      }
+      setTypeModal(false);
+    } catch (e) { alert('Lỗi: ' + e.message); }
   };
 
-  const handleDeleteType = (id) => {
-    const busCount = buses.filter(b => b.typeId === id).length;
+  const handleDeleteType = async (id) => {
+    const busCount = buses.filter(b => b.busTypeId === id).length;
     if (busCount > 0) { alert(`Không thể xóa loại xe này vì đang có ${busCount} xe sử dụng.`); setDeleteTypeId(null); return; }
-    setBusTypes(ts => ts.filter(t => t.id !== id));
+    try {
+      await deleteBusType(id);
+      setBusTypes(ts => ts.filter(t => t.id !== id));
+    } catch (e) { alert('Lỗi: ' + e.message); }
     setDeleteTypeId(null);
   };
 
@@ -160,7 +191,7 @@ const BusesPage = () => {
           {/* Bus type stats */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:'var(--sp-4)', marginBottom:'var(--sp-5)' }}>
             {busTypes.map(bt => {
-              const count = buses.filter(b => b.typeId === bt.id).length;
+              const count = buses.filter(b => b.busTypeId === bt.id).length;
               return (
                 <div key={bt.id} className="a-card" style={{ padding:'var(--sp-4) var(--sp-5)', display:'flex', alignItems:'center', gap:'var(--sp-3)' }}>
                   <div style={{ width:40, height:40, background:'var(--primary-bg)', borderRadius:'var(--r-md)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--primary)', flexShrink:0 }}>
@@ -194,7 +225,7 @@ const BusesPage = () => {
                 </thead>
                 <tbody>
                   {filteredBuses.map(b => {
-                    const bt = busTypes.find(t => t.id === b.typeId);
+                    const bt = busTypes.find(t => t.id === b.busTypeId);
                     const penalized = isPenalized(b);
                     const st = penalized ? STATUS_COLORS.penalized : STATUS_COLORS[b.status] || STATUS_COLORS.inactive;
                     return (
@@ -207,7 +238,7 @@ const BusesPage = () => {
                         </td>
                         <td><span className="a-badge a-badge-blue">{bt?.name || '—'}</span></td>
                         <td>{bt?.seats || '—'} chỗ</td>
-                        <td style={{ color:'var(--gray-500)' }}>{b.description}</td>
+                        <td style={{ color:'var(--gray-500)' }}>{b.name}</td>
                         <td>
                           <span className={`a-badge ${st.cls}`}>{st.label}</span>
                           {penalized && (
@@ -260,7 +291,7 @@ const BusesPage = () => {
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px,1fr))', gap:'var(--sp-4)' }}>
             {filteredTypes.map(bt => {
-              const busCount = buses.filter(b => b.typeId === bt.id).length;
+              const busCount = buses.filter(b => b.busTypeId === bt.id).length;
               return (
                 <div key={bt.id} className="a-card" style={{ padding:'var(--sp-5)' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'var(--sp-3)' }}>
@@ -274,7 +305,7 @@ const BusesPage = () => {
                     </div>
                   </div>
                   <div style={{ display:'flex', gap:'var(--sp-5)', fontSize:'0.875rem' }}>
-                    <div><span style={{ color:'var(--gray-400)' }}>Số chỗ: </span><strong style={{ color:'var(--primary)' }}>{bt.seats}</strong></div>
+                    <div><span style={{ color:'var(--gray-400)' }}>Số chỗ: </span><strong style={{ color:'var(--primary)' }}>{bt.totalSeats}</strong></div>
                     <div><span style={{ color:'var(--gray-400)' }}>Đang dùng: </span><strong>{busCount} xe</strong></div>
                   </div>
                 </div>
@@ -301,7 +332,7 @@ const BusesPage = () => {
                 <div className="a-form-group">
                   <label className="a-label">Loại xe *</label>
                   <select className="a-input a-select" value={form.typeId} onChange={e => setForm(f=>({...f,typeId:e.target.value}))} id="bus-type">
-                    {busTypes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.seats} chỗ)</option>)}
+                    {busTypes.map(t => <option key={t.id} value={t.id}>{t.name} ({t.totalSeats} chỗ)</option>)}
                   </select>
                 </div>
                 <div className="a-form-group">
@@ -315,8 +346,8 @@ const BusesPage = () => {
                 </div>
               </div>
               <div className="a-form-group">
-                <label className="a-label">Mô tả</label>
-                <input className="a-input" placeholder="Xe Giường Nằm..." value={form.description} onChange={e => setForm(f=>({...f,description:e.target.value}))} id="bus-desc" />
+                <label className="a-label">Tên xe</label>
+                <input className="a-input" placeholder="Xe Giường Nằm..." value={form.name} onChange={e => setForm(f=>({...f,name:e.target.value}))} id="bus-name" />
               </div>
             </div>
             <div className="modal-footer">

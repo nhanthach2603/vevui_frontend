@@ -4,6 +4,8 @@ import com.vevui.tripservice.dto.TripDto;
 import com.vevui.tripservice.service.TripService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -79,6 +81,13 @@ public class TripController {
 
     // ── Admin: Route Management ──
 
+    @GetMapping("/api/admin/routes")
+    public ResponseEntity<Page<TripDto.RouteDto>> getAllRoutesAdmin(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(tripService.getAllRoutesAdmin(PageRequest.of(page, size)));
+    }
+
     @PostMapping("/api/admin/routes")
     public ResponseEntity<TripDto.RouteDto> createRoute(
             @RequestBody TripDto.CreateRouteRequest req) {
@@ -100,13 +109,57 @@ public class TripController {
 
     // ── Admin: Bus Management ──
 
+    @GetMapping("/api/admin/bus-types")
+    public ResponseEntity<List<TripDto.BusTypeDto>> getAllBusTypes() {
+        return ResponseEntity.ok(tripService.getAllBusTypes());
+    }
+
+    @PostMapping("/api/admin/bus-types")
+    public ResponseEntity<TripDto.BusTypeDto> createBusType(
+            @RequestBody TripDto.CreateBusTypeRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(tripService.createBusType(req));
+    }
+
+    @PutMapping("/api/admin/bus-types/{id}")
+    public ResponseEntity<TripDto.BusTypeDto> updateBusType(
+            @PathVariable Long id,
+            @RequestBody TripDto.CreateBusTypeRequest req) {
+        return ResponseEntity.ok(tripService.updateBusType(id, req));
+    }
+
+    @DeleteMapping("/api/admin/bus-types/{id}")
+    public ResponseEntity<Map<String, String>> deleteBusType(@PathVariable Long id) {
+        tripService.deleteBusType(id);
+        return ResponseEntity.ok(Map.of("message", "Loại xe đã được xóa"));
+    }
+
+    @GetMapping("/api/admin/buses")
+    public ResponseEntity<Page<TripDto.BusDto>> getAllBusesAdmin(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(tripService.getAllBusesAdmin(PageRequest.of(page, size)));
+    }
+
     @PostMapping("/api/admin/buses")
     public ResponseEntity<TripDto.BusDto> createBus(
             @RequestBody TripDto.CreateBusRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(tripService.createBus(req));
     }
 
+    @DeleteMapping("/api/admin/buses/{id}")
+    public ResponseEntity<Map<String, String>> deleteBus(@PathVariable Long id) {
+        tripService.deleteBus(id);
+        return ResponseEntity.ok(Map.of("message", "Xe đã được vô hiệu hóa"));
+    }
+
     // ── Admin: Trip Management ──
+
+    @GetMapping("/api/admin/trips")
+    public ResponseEntity<Page<TripDto.TripResponse>> getAllTripsAdmin(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(tripService.getAllTripsAdmin(PageRequest.of(page, size)));
+    }
 
     @PostMapping("/api/admin/trips")
     public ResponseEntity<TripDto.TripResponse> createTrip(
@@ -126,6 +179,12 @@ public class TripController {
             @PathVariable Long id,
             @RequestBody TripDto.CreateBusRequest req) {
         return ResponseEntity.ok(tripService.updateBus(id, req));
+    }
+
+    @DeleteMapping("/api/admin/trips/{id}")
+    public ResponseEntity<Map<String, String>> deleteTrip(@PathVariable Long id) {
+        tripService.deleteTrip(id);
+        return ResponseEntity.ok(Map.of("message", "Chuyến đi đã được hủy"));
     }
 
     // ── Error Handler ──

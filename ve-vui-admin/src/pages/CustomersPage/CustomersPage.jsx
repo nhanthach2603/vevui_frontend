@@ -2,14 +2,32 @@
 import { useEffect, useState } from 'react';
 import { FiSearch, FiEye, FiUsers, FiUserCheck, FiUserX } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { customers as initialCustomers } from '../../services/adminData';
+import { fetchUsers } from '../../services/apiService';
 
 const CustomersPage = () => {
-  const [customers, setCustomers] = useState(initialCustomers);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState('');
   const [viewItem, setView]       = useState(null);
 
   useEffect(() => { document.title = 'Khách hàng | Vé Vui Admin'; }, []);
+
+  useEffect(() => {
+    fetchUsers().then(data => {
+      // Map backend fields (fullName, email, phone, enabled, createdAt) to UI fields
+      const mapped = (data?.content || []).map(u => ({
+        id: u.id,
+        name: u.fullName || u.email,
+        phone: u.phone || '—',
+        email: u.email,
+        status: u.enabled !== false ? 'active' : 'inactive',
+        joinedAt: u.createdAt || new Date().toISOString(),
+        totalTrips: u.totalTrips || 0,
+      }));
+      setCustomers(mapped);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   const filtered = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -17,6 +35,7 @@ const CustomersPage = () => {
     c.email.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Status toggle is local-only (no backend endpoint for lock)
   const toggleStatus = (id) => setCustomers(cs => cs.map(c => c.id === id ? { ...c, status: c.status==='active'?'inactive':'active' } : c));
 
   const active   = customers.filter(c=>c.status==='active').length;

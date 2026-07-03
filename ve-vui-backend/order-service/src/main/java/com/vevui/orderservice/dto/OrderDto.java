@@ -92,4 +92,17 @@ public class OrderDto {
         private String transactionId;
         private String message;
     }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class StatsResponse {
+        private long totalTickets;
+        private long confirmedTickets;
+        private long cancelledTickets;
+        private BigDecimal totalRevenue;
+        private long todayTickets;
+        private BigDecimal todayRevenue;
+    }
 }

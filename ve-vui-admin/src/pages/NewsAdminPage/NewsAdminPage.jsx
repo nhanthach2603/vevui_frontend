@@ -2,19 +2,21 @@
 import { useEffect, useState } from 'react';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiFileText, FiTag } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { newsArticles as initialNews } from '../../services/adminData';
+import { fetchNews, createNews, updateNews, deleteNews } from '../../services/apiService';
 
 const initialCategories = ['Khuyến mãi', 'Tin tức', 'Hướng dẫn', 'Du lịch', 'Thông báo'];
 
 const NewsAdminPage = () => {
   const [tab, setTab]                     = useState('news');
-  const [news, setNews]                   = useState(initialNews);
+  const [news, setNews]                   = useState([]);
+  const [loading, setLoading]             = useState(true);
   const [categories, setCategories]       = useState(initialCategories);
   const [search, setSearch]               = useState('');
   const [showModal, setModal]             = useState(false);
   const [editItem, setEdit]               = useState(null);
   const [deleteId, setDeleteId]           = useState(null);
   const [form, setForm]                   = useState({ title:'', excerpt:'', category:'Tin tức', author:'Admin', status:'draft' });
+  const [saving, setSaving]               = useState(false);
 
   const [catForm, setCatForm]             = useState('');
   const [editCatIdx, setEditCatIdx]       = useState(null);
@@ -22,6 +24,25 @@ const NewsAdminPage = () => {
   const [showCatModal, setCatModal]       = useState(false);
 
   useEffect(() => { document.title = 'Tin tức | Vé Vui Admin'; }, []);
+
+  useEffect(() => {
+    fetchNews(0, 100).then(data => {
+      // Backend may return Page<Article> or array
+      const items = data?.content || (Array.isArray(data) ? data : []);
+      const mapped = items.map(n => ({
+        id: n.id,
+        title: n.title,
+        excerpt: n.excerpt || n.summary || '',
+        category: n.category || 'Tin tức',
+        author: n.author || 'Admin',
+        status: n.published ? 'published' : (n.status || 'draft'),
+        publishedAt: n.publishedAt || n.createdAt || new Date().toISOString().split('T')[0],
+        views: n.viewCount || n.views || 0,
+      }));
+      setNews(mapped);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, []);
 
   // ── News ──
   const filteredNews = news.filter(n =>
@@ -32,18 +53,31 @@ const NewsAdminPage = () => {
   const openAdd  = () => { setEdit(null); setForm({ title:'', excerpt:'', category: categories[0] || 'Tin tức', author:'Admin', status:'draft' }); setModal(true); };
   const openEdit = (n) => { setEdit(n); setForm({ title:n.title, excerpt:n.excerpt||'', category:n.category, author:n.author, status:n.status }); setModal(true); };
 
-  const handleSaveNews = () => {
+  const handleSaveNews = async () => {
     if (!form.title.trim()) return;
-    if (editItem) {
-      setNews(ns => ns.map(n => n.id === editItem.id ? { ...n, ...form } : n));
-    } else {
-      const now = new Date().toISOString().split('T')[0];
-      setNews(ns => [...ns, { id:`n${Date.now()}`, ...form, publishedAt: now, views: 0 }]);
-    }
-    setModal(false);
+    setSaving(true);
+    const body = { title: form.title, excerpt: form.excerpt, category: form.category, author: form.author, published: form.status === 'published' };
+    try {
+      if (editItem) {
+        await updateNews(editItem.id, body);
+        setNews(ns => ns.map(n => n.id === editItem.id ? { ...n, ...form } : n));
+      } else {
+        const created = await createNews(body);
+        const now = new Date().toISOString().split('T')[0];
+        setNews(ns => [...ns, { id: created.id || `n${Date.now()}`, ...form, publishedAt: now, views: 0 }]);
+      }
+      setModal(false);
+    } catch (e) { alert('Lỗi: ' + e.message); }
+    setSaving(false);
   };
 
-  const handleDeleteNews = (id) => { setNews(ns => ns.filter(n => n.id !== id)); setDeleteId(null); };
+  const handleDeleteNews = async (id) => {
+    try {
+      await deleteNews(id);
+      setNews(ns => ns.filter(n => n.id !== id));
+    } catch (e) { alert('Lỗi: ' + e.message); }
+    setDeleteId(null);
+  };
 
   // ── Categories ──
   const openAddCat  = () => { setEditCatIdx(null); setCatForm(''); setCatModal(true); };
@@ -225,7 +259,7 @@ const NewsAdminPage = () => {
             </div>
             <div className="modal-footer">
               <button className="a-btn a-btn-ghost" onClick={() => setModal(false)}>Hủy</button>
-              <button className="a-btn a-btn-primary" onClick={handleSaveNews} id="save-news">Lưu bài</button>
+              <button className="a-btn a-btn-primary" onClick={handleSaveNews} disabled={saving} id="save-news">{saving ? 'Đang lưu...' : 'Lưu bài'}</button>
             </div>
           </div>
         </div>

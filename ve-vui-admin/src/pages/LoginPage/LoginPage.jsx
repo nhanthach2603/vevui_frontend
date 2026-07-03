@@ -1,10 +1,11 @@
 // pages/LoginPage/LoginPage.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginAdmin } from '../../services/apiService';
 import './LoginPage.css';
 
 const LoginPage = () => {
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -15,15 +16,23 @@ const LoginPage = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
-    await new Promise(r => setTimeout(r, 600));
-    if (form.username === 'admin' && form.password === 'admin123') {
-      localStorage.setItem('vevui_admin', JSON.stringify({ name: 'Admin', username: 'admin' }));
+
+    try {
+      const data = await loginAdmin(form.email, form.password);
+      localStorage.setItem('vevui_admin', JSON.stringify({
+        name: data.fullName || 'Admin',
+        username: data.email,
+        token: data.accessToken,
+        role: data.role,
+      }));
       navigate('/dashboard');
-    } else {
-      setError('Tên đăng nhập hoặc mật khẩu không đúng');
+    } catch (apiErr) {
+      setError(apiErr.message || 'Tên đăng nhập hoặc mật khẩu không đúng');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
 
   return (
     <div className="login-page">
@@ -76,12 +85,13 @@ const LoginPage = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="a-form-group" style={{ marginBottom:'var(--sp-4)' }}>
-              <label className="a-label">Tên đăng nhập</label>
+              <label className="a-label">Email</label>
               <input
                 className="a-input"
-                placeholder="admin"
-                value={form.username}
-                onChange={e => setForm(f => ({ ...f, username: e.target.value }))}
+                type="email"
+                placeholder="admin@vevui.vn"
+                value={form.email}
+                onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
                 id="admin-username"
                 autoComplete="username"
               />
@@ -111,7 +121,7 @@ const LoginPage = () => {
           </form>
 
           <div className="login-hint">
-            <div>💡 Demo: <strong>admin</strong> / <strong>admin123</strong></div>
+            <div>💡 Demo: <strong>admin@vevui.vn</strong> / <strong>admin123</strong></div>
           </div>
         </div>
       </div>

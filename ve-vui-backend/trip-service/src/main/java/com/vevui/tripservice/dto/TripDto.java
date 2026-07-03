@@ -38,6 +38,7 @@ public class TripDto {
         private String plateNumber;
         private String name;
         private String status;
+        private Long busTypeId;
         private String busTypeName;
         private String busTypeCode;
         private Integer totalSeats;
@@ -48,6 +49,25 @@ public class TripDto {
         private String plateNumber;
         private String name;
         private Long busTypeId;
+    }
+
+    @Data
+    public static class BusTypeDto {
+        private Long id;
+        private String name;
+        private String code;
+        private Integer totalSeats;
+        private String description;
+        private String icon;
+    }
+
+    @Data
+    public static class CreateBusTypeRequest {
+        private String name;
+        private String code;
+        private Integer totalSeats;
+        private String description;
+        private String icon;
     }
 
     @Data

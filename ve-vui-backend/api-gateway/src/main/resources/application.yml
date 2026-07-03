@@ -65,7 +65,7 @@ spring:
         - id: trip-service-admin
           uri: lb://trip-service
           predicates:
-            - Path=/api/admin/routes/**, /api/admin/buses/**, /api/admin/trips/**
+            - Path=/api/admin/routes/**, /api/admin/buses/**, /api/admin/trips/**, /api/admin/bus-types/**
           filters:
             - StripPrefix=0
 
@@ -84,10 +84,25 @@ spring:
           filters:
             - StripPrefix=0
 
-        - id: order-service-admin
+        - id: order-service-admin-tickets
           uri: lb://order-service
           predicates:
             - Path=/api/admin/tickets/**
+          filters:
+            - StripPrefix=0
+
+        - id: order-service-admin-stats
+          uri: lb://order-service
+          predicates:
+            - Path=/api/admin/stats
+          filters:
+            - StripPrefix=0
+
+        # ── User Service Admin ──
+        - id: user-service-admin
+          uri: lb://user-service
+          predicates:
+            - Path=/api/admin/users
           filters:
             - StripPrefix=0
 

@@ -2,17 +2,23 @@
 import { useEffect, useState } from 'react';
 import { FiSave, FiUser, FiLock, FiGlobe, FiBell } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
+import { fetchUsers } from '../../services/apiService';
 
 const SettingsPage = () => {
   useEffect(() => { document.title = 'Cài đặt | Vé Vui Admin'; }, []);
 
   const [activeTab, setActiveTab] = useState('profile');
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const adminData = (() => {
+    try { return JSON.parse(localStorage.getItem('vevui_admin') || '{}'); } catch { return {}; }
+  })();
 
   const [profile, setProfile] = useState({
-    name: 'Admin',
-    email: 'admin@vevui.vn',
-    phone: '0901234567',
+    name: adminData.name || '',
+    email: adminData.username || '',
+    phone: '',
   });
 
   const [password, setPassword] = useState({
@@ -28,8 +34,34 @@ const SettingsPage = () => {
     promotion: true,
   });
 
-  const handleSave = () => {
+  useEffect(() => {
+    // Load profile from API
+    const loadProfile = async () => {
+      try {
+        const data = await fetchUsers(0, 1);
+        const adminUser = data?.content?.find(u => u.email === adminData.username) || data?.content?.[0];
+        if (adminUser) {
+          setProfile({
+            name: adminUser.fullName || adminData.name || '',
+            email: adminUser.email || adminData.username || '',
+            phone: adminUser.phone || '',
+          });
+        }
+      } catch {}
+    };
+    loadProfile();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    // Simulate save (backend doesn't have profile update for admin yet)
+    await new Promise(r => setTimeout(r, 500));
+    // Update localStorage with new name
+    const stored = JSON.parse(localStorage.getItem('vevui_admin') || '{}');
+    stored.name = profile.name;
+    localStorage.setItem('vevui_admin', JSON.stringify(stored));
     setSaved(true);
+    setSaving(false);
     setTimeout(() => setSaved(false), 2000);
   };
 

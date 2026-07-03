@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -115,6 +116,37 @@ public class OrderService {
 
     public Page<OrderDto.TicketResponse> getAllTickets(Pageable pageable) {
         return ticketRepository.findAllByOrderByBookedAtDesc(pageable).map(this::toResponse);
+    }
+
+    public OrderDto.StatsResponse getStats() {
+        List<Ticket> all = ticketRepository.findAll();
+        String today = LocalDate.now().toString();
+
+        long confirmed = all.stream().filter(t -> t.getStatus() == Ticket.Status.CONFIRMED).count();
+        long cancelled = all.stream().filter(t -> t.getStatus() == Ticket.Status.CANCELLED).count();
+
+        BigDecimal totalRevenue = all.stream()
+                .filter(t -> t.getStatus() == Ticket.Status.CONFIRMED)
+                .map(Ticket::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        List<Ticket> todayList = all.stream()
+                .filter(t -> t.getTripDate() != null && t.getTripDate().equals(today))
+                .collect(Collectors.toList());
+        long todayTickets = todayList.size();
+        BigDecimal todayRevenue = todayList.stream()
+                .filter(t -> t.getStatus() == Ticket.Status.CONFIRMED)
+                .map(Ticket::getTotalPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return OrderDto.StatsResponse.builder()
+                .totalTickets(all.size())
+                .confirmedTickets(confirmed)
+                .cancelledTickets(cancelled)
+                .totalRevenue(totalRevenue)
+                .todayTickets(todayTickets)
+                .todayRevenue(todayRevenue)
+                .build();
     }
 
     @Transactional

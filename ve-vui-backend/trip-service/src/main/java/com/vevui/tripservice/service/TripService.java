@@ -16,6 +16,8 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Slf4j
 @Service
@@ -36,6 +38,11 @@ public class TripService {
         return routeRepository.findByActiveTrue().stream()
                 .map(this::toRouteDto)
                 .collect(Collectors.toList());
+    }
+
+    /** Admin: lấy tất cả tuyến kể cả inactive, có phân trang */
+    public Page<TripDto.RouteDto> getAllRoutesAdmin(Pageable pageable) {
+        return routeRepository.findAll(pageable).map(this::toRouteDto);
     }
 
     @Cacheable(value = "routes", key = "'popular'")
@@ -88,8 +95,54 @@ public class TripService {
 
     // ── Bus Operations ──
 
+    public List<TripDto.BusTypeDto> getAllBusTypes() {
+        return busTypeRepository.findAll().stream().map(this::toBusTypeDto).collect(Collectors.toList());
+    }
+
+    public TripDto.BusTypeDto createBusType(TripDto.CreateBusTypeRequest req) {
+        BusType busType = BusType.builder()
+                .name(req.getName())
+                .code(req.getCode())
+                .totalSeats(req.getTotalSeats())
+                .description(req.getDescription())
+                .icon(req.getIcon() != null ? req.getIcon() : "🚌")
+                .build();
+        return toBusTypeDto(busTypeRepository.save(busType));
+    }
+
+    public TripDto.BusTypeDto updateBusType(Long id, TripDto.CreateBusTypeRequest req) {
+        BusType busType = busTypeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy loại xe: " + id));
+        if (req.getName() != null) busType.setName(req.getName());
+        if (req.getCode() != null) busType.setCode(req.getCode());
+        if (req.getTotalSeats() != null) busType.setTotalSeats(req.getTotalSeats());
+        if (req.getDescription() != null) busType.setDescription(req.getDescription());
+        if (req.getIcon() != null) busType.setIcon(req.getIcon());
+        return toBusTypeDto(busTypeRepository.save(busType));
+    }
+
+    public void deleteBusType(Long id) {
+        BusType busType = busTypeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy loại xe: " + id));
+        busTypeRepository.delete(busType);
+    }
+
     public List<TripDto.BusDto> getAllBuses() {
         return busRepository.findAll().stream().map(this::toBusDto).collect(Collectors.toList());
+    }
+
+    /** Admin: lấy danh sách xe có phân trang */
+    public Page<TripDto.BusDto> getAllBusesAdmin(Pageable pageable) {
+        return busRepository.findAll(pageable).map(this::toBusDto);
+    }
+
+    /** Admin: xóa xe (soft delete — đặt status = INACTIVE) */
+    public void deleteBus(Long id) {
+        Bus bus = busRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy xe: " + id));
+        bus.setStatus(Bus.Status.INACTIVE);
+        busRepository.save(bus);
+        log.info("Bus {} set to INACTIVE", id);
     }
 
     public TripDto.BusDto createBus(TripDto.CreateBusRequest req) {
@@ -106,6 +159,21 @@ public class TripService {
     }
 
     // ── Trip Search (Cached) ──
+
+    /** Admin: lấy tất cả chuyến đi có phân trang */
+    public Page<TripDto.TripResponse> getAllTripsAdmin(Pageable pageable) {
+        return tripRepository.findAll(pageable).map(this::toTripResponse);
+    }
+
+    /** Admin: xóa chuyến đi (soft delete — đặt status = CANCELLED) */
+    @CacheEvict(value = "trips", allEntries = true)
+    public void deleteTrip(Long id) {
+        Trip trip = tripRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy chuyến: " + id));
+        trip.setStatus(Trip.Status.CANCELLED);
+        tripRepository.save(trip);
+        log.info("Trip {} set to CANCELLED", id);
+    }
 
     @Cacheable(value = "trips", key = "#fromCity + '-' + #toCity + '-' + #date")
     public List<TripDto.TripResponse> searchTrips(String fromCity, String toCity, String date) {
@@ -300,10 +368,22 @@ public class TripService {
         dto.setName(b.getName());
         dto.setStatus(b.getStatus().name());
         if (b.getBusType() != null) {
+            dto.setBusTypeId(b.getBusType().getId());
             dto.setBusTypeName(b.getBusType().getName());
             dto.setBusTypeCode(b.getBusType().getCode());
             dto.setTotalSeats(b.getBusType().getTotalSeats());
         }
+        return dto;
+    }
+
+    private TripDto.BusTypeDto toBusTypeDto(BusType bt) {
+        TripDto.BusTypeDto dto = new TripDto.BusTypeDto();
+        dto.setId(bt.getId());
+        dto.setName(bt.getName());
+        dto.setCode(bt.getCode());
+        dto.setTotalSeats(bt.getTotalSeats());
+        dto.setDescription(bt.getDescription());
+        dto.setIcon(bt.getIcon());
         return dto;
     }
 

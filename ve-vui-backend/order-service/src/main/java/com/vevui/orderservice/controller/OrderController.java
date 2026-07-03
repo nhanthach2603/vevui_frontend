@@ -61,6 +61,11 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getAllTickets(PageRequest.of(page, size)));
     }
 
+    @GetMapping("/api/admin/stats")
+    public ResponseEntity<OrderDto.StatsResponse> getStats() {
+        return ResponseEntity.ok(orderService.getStats());
+    }
+
     // ── Payment Endpoints ──
 
     @PostMapping("/api/payment/process")

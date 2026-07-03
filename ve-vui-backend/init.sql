@@ -143,6 +143,6 @@ USE db_users;
 -- Password hash: BCrypt of 'admin123'
 INSERT INTO users (full_name, email, password, phone, role, enabled)
 VALUES ('Admin Vé Vui', 'admin@vevui.vn',
-        '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+        '$2a$10$L5DcBzy6Tc6gVbtZbF3INez6TQEHtCY1YXLnIRrRWxuvB7iuAGijO',
         '0900000001', 'ADMIN', TRUE)
 ON DUPLICATE KEY UPDATE role=VALUES(role);
