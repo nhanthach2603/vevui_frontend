@@ -99,6 +99,12 @@ public class TripService {
         return busTypeRepository.findAll().stream().map(this::toBusTypeDto).collect(Collectors.toList());
     }
 
+    public TripDto.BusTypeDto getBusTypeById(Long id) {
+        BusType busType = busTypeRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy loại xe: " + id));
+        return toBusTypeDto(busType);
+    }
+
     public TripDto.BusTypeDto createBusType(TripDto.CreateBusTypeRequest req) {
         BusType busType = BusType.builder()
                 .name(req.getName())
@@ -356,6 +362,12 @@ public class TripService {
     }
 
     // ── Admin: Bus Detail & Status ──
+
+    public List<TripDto.BusDto> searchBusesAdmin(String q) {
+        return busRepository.searchByKeyword(q.toLowerCase()).stream()
+                .map(this::toBusDto)
+                .collect(Collectors.toList());
+    }
 
     public TripDto.BusDto getBusById(Long id) {
         Bus bus = busRepository.findById(id)

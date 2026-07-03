@@ -140,6 +140,12 @@ public class TripController {
         return ResponseEntity.ok(tripService.getAllBusesAdmin(PageRequest.of(page, size)));
     }
 
+    @GetMapping("/api/admin/buses/search")
+    public ResponseEntity<List<TripDto.BusDto>> searchBusesAdmin(
+            @RequestParam String q) {
+        return ResponseEntity.ok(tripService.searchBusesAdmin(q));
+    }
+
     @PostMapping("/api/admin/buses")
     public ResponseEntity<TripDto.BusDto> createBus(
             @RequestBody TripDto.CreateBusRequest req) {
@@ -222,6 +228,13 @@ public class TripController {
             @PathVariable Long id,
             @RequestBody TripDto.UpdateBusStatusRequest req) {
         return ResponseEntity.ok(tripService.updateBusStatus(id, req.getStatus()));
+    }
+
+    // ── Admin: BusType Detail ──
+
+    @GetMapping("/api/admin/bus-types/{id}")
+    public ResponseEntity<TripDto.BusTypeDto> getBusTypeById(@PathVariable Long id) {
+        return ResponseEntity.ok(tripService.getBusTypeById(id));
     }
 
     // ── Error Handler ──
