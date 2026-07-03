@@ -85,8 +85,27 @@ public class NewsService {
 
     // ── Admin: News Management ──
 
+    public NewsDto.NewsResponse getNewsById(Long id) {
+        News news = newsRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bài viết: " + id));
+        return toResponse(news);
+    }
+
+    public List<NewsDto.NewsResponse> searchNews(String q) {
+        return newsRepository.searchByKeyword(q.toLowerCase()).stream()
+                .map(this::toResponse)
+                .collect(Collectors.toList());
+    }
+
     public Page<NewsDto.NewsResponse> getAllAdmin(Pageable pageable) {
         return newsRepository.findAll(pageable).map(this::toResponse);
+    }
+
+    // ── Public: Category ──
+
+    public Page<NewsDto.NewsResponse> getByCategory(String category, Pageable pageable) {
+        return newsRepository.findByCategoryAndPublishedTrue(category, pageable)
+                .map(this::toResponse);
     }
 
     @CacheEvict(value = {"news-list", "news-featured"}, allEntries = true)

@@ -2,10 +2,12 @@ package com.vevui.newsservice.dto;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 public class NewsDto {
 
     @Data
-    public static class NewsResponse {
+    public static class NewsResponse implements Serializable {
         private Long id;
         private String slug;
         private String title;

@@ -37,11 +37,37 @@ public class NewsController {
         return ResponseEntity.ok(newsService.getBySlug(slug));
     }
 
+    @GetMapping("/api/news/category/{category}")
+    public ResponseEntity<Page<NewsDto.NewsResponse>> getByCategory(
+            @PathVariable String category,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(newsService.getByCategory(category, PageRequest.of(page, size)));
+    }
+
     // ── Admin ──
+
+    @GetMapping("/api/admin/news")
+    public ResponseEntity<Page<NewsDto.NewsResponse>> getAllAdmin(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(newsService.getAllAdmin(PageRequest.of(page, size)));
+    }
+
+    @GetMapping("/api/admin/news/search")
+    public ResponseEntity<List<NewsDto.NewsResponse>> searchNews(
+            @RequestParam String q) {
+        return ResponseEntity.ok(newsService.searchNews(q));
+    }
 
     @PostMapping("/api/admin/news")
     public ResponseEntity<NewsDto.NewsResponse> create(@RequestBody NewsDto.CreateNewsRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(newsService.create(req));
+    }
+
+    @GetMapping("/api/admin/news/{id}")
+    public ResponseEntity<NewsDto.NewsResponse> getNewsById(@PathVariable Long id) {
+        return ResponseEntity.ok(newsService.getNewsById(id));
     }
 
     @PutMapping("/api/admin/news/{id}")
@@ -54,13 +80,6 @@ public class NewsController {
     public ResponseEntity<Map<String, String>> delete(@PathVariable Long id) {
         newsService.delete(id);
         return ResponseEntity.ok(Map.of("message", "Bài viết đã được xóa"));
-    }
-
-    @GetMapping("/api/admin/news")
-    public ResponseEntity<Page<NewsDto.NewsResponse>> getAllAdmin(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(newsService.getAllAdmin(PageRequest.of(page, size)));
     }
 
     @PutMapping("/api/admin/news/{id}/publish")

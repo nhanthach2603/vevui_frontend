@@ -9,6 +9,11 @@ CREATE DATABASE IF NOT EXISTS db_trips CHARACTER SET utf8mb4 COLLATE utf8mb4_uni
 CREATE DATABASE IF NOT EXISTS db_orders CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE DATABASE IF NOT EXISTS db_news CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+-- Ensure UTF-8 encoding for client connections
+SET NAMES utf8mb4;
+SET CHARACTER_SET_CLIENT = utf8mb4;
+SET CHARACTER_SET_RESULTS = utf8mb4;
+
 -- Grant privileges
 GRANT ALL PRIVILEGES ON db_users.* TO 'root'@'%';
 GRANT ALL PRIVILEGES ON db_trips.* TO 'root'@'%';
