@@ -16,8 +16,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.data.domain.PageImpl;
-
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -121,8 +119,10 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user: " + id));
         if ("BANNED".equals(status)) {
             user.setEnabled(false);
-        } else {
+        } else if ("ACTIVE".equals(status)) {
             user.setEnabled(true);
+        } else {
+            throw new IllegalArgumentException("Trạng thái không hợp lệ: " + status);
         }
         return toUserDto(userRepository.save(user));
     }
@@ -136,16 +136,53 @@ public class UserService {
         log.info("User {} soft-deleted (disabled)", id);
     }
 
-    public Page<AuthDto.UserDto> searchUsers(String q, Pageable pageable) {
-        // Get all users and filter (works for small admin datasets)
-        Page<AuthDto.UserDto> all = userRepository.findAll(pageable).map(this::toUserDto);
-        String lower = q.toLowerCase();
-        List<AuthDto.UserDto> filtered = all.getContent().stream()
-                .filter(dto -> (dto.getFullName() != null && dto.getFullName().toLowerCase().contains(lower))
-                        || (dto.getEmail() != null && dto.getEmail().toLowerCase().contains(lower))
-                        || (dto.getPhone() != null && dto.getPhone().contains(lower)))
+    public List<AuthDto.UserDto> searchUsers(String q) {
+        return userRepository.searchByKeyword(q.toLowerCase()).stream()
+                .map(this::toUserDto)
                 .collect(Collectors.toList());
-        return new PageImpl<>(filtered, pageable, filtered.size());
+    }
+
+    @Transactional
+    public AuthDto.UserDto createUserByAdmin(AuthDto.AdminCreateUserRequest req) {
+        if (userRepository.existsByEmail(req.getEmail())) {
+            throw new IllegalArgumentException("Email đã được sử dụng: " + req.getEmail());
+        }
+        if (req.getPhone() != null && userRepository.existsByPhone(req.getPhone())) {
+            throw new IllegalArgumentException("Số điện thoại đã được sử dụng");
+        }
+
+        User.Role role = User.Role.USER;
+        if (req.getRole() != null) {
+            try {
+                role = User.Role.valueOf(req.getRole().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new IllegalArgumentException("Vai trò không hợp lệ: " + req.getRole());
+            }
+        }
+
+        User user = User.builder()
+                .fullName(req.getFullName())
+                .email(req.getEmail())
+                .password(passwordEncoder.encode(req.getPassword()))
+                .phone(req.getPhone())
+                .role(role)
+                .build();
+
+        User saved = userRepository.save(user);
+        log.info("Admin created user: {} ({})", saved.getEmail(), saved.getId());
+        return toUserDto(saved);
+    }
+
+    @Transactional
+    public AuthDto.UserDto updateUserRole(Long id, String role) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy user: " + id));
+        try {
+            user.setRole(User.Role.valueOf(role.toUpperCase()));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Vai trò không hợp lệ: " + role);
+        }
+        return toUserDto(userRepository.save(user));
     }
 
     private AuthDto.AuthResponse buildAuthResponse(User user, String refreshToken) {

@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -73,6 +74,20 @@ public class AuthController {
         return ResponseEntity.ok(userService.getAllUsers(PageRequest.of(page, size)));
     }
 
+    @GetMapping("/api/admin/users/search")
+    public ResponseEntity<List<AuthDto.UserDto>> searchUsers(
+            @RequestParam String q) {
+        return ResponseEntity.ok(userService.searchUsers(q));
+    }
+
+    @PostMapping("/api/admin/users")
+    public ResponseEntity<AuthDto.UserDto> createUserByAdmin(
+            @Valid @RequestBody AuthDto.AdminCreateUserRequest request) {
+        log.info("Admin creating user: {}", request.getEmail());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(userService.createUserByAdmin(request));
+    }
+
     @GetMapping("/api/admin/users/{id}")
     public ResponseEntity<AuthDto.UserDto> getUserByIdAdmin(@PathVariable Long id) {
         return ResponseEntity.ok(userService.getUserById(id));
@@ -85,18 +100,17 @@ public class AuthController {
         return ResponseEntity.ok(userService.updateUserStatus(id, req.getStatus()));
     }
 
+    @PutMapping("/api/admin/users/{id}/role")
+    public ResponseEntity<AuthDto.UserDto> updateUserRole(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        return ResponseEntity.ok(userService.updateUserRole(id, body.get("role")));
+    }
+
     @DeleteMapping("/api/admin/users/{id}")
     public ResponseEntity<Map<String, String>> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
-        return ResponseEntity.ok(Map.of("message", "Người dùng đã được xóa"));
-    }
-
-    @GetMapping("/api/admin/users/search")
-    public ResponseEntity<Page<AuthDto.UserDto>> searchUsers(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "100") int size) {
-        return ResponseEntity.ok(userService.searchUsers(q, PageRequest.of(page, size)));
+        return ResponseEntity.ok(Map.of("message", "Tài khoản đã được vô hiệu hóa"));
     }
 
     // ── Global error handler ──

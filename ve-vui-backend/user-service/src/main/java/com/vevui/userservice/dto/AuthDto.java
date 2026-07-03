@@ -77,4 +77,24 @@ public class AuthDto {
     public static class UpdateUserStatusRequest {
         private String status;
     }
+
+    @Data
+    public static class AdminCreateUserRequest {
+        @NotBlank(message = "Họ tên không được trống")
+        @Size(min = 2, max = 100)
+        private String fullName;
+
+        @NotBlank(message = "Email không được trống")
+        @Email(message = "Email không hợp lệ")
+        private String email;
+
+        @NotBlank(message = "Mật khẩu không được trống")
+        @Size(min = 6, message = "Mật khẩu phải ít nhất 6 ký tự")
+        private String password;
+
+        @Pattern(regexp = "^(0[3|5|7|8|9])+([0-9]{8})$")
+        private String phone;
+
+        private String role = "USER"; // USER or ADMIN
+    }
 }
