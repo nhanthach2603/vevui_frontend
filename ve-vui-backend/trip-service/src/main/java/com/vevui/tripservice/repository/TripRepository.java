@@ -25,4 +25,10 @@ public interface TripRepository extends JpaRepository<Trip, Long> {
     @Query("UPDATE Trip t SET t.bookedSeats = :bookedSeats, " +
            "t.availableSeats = t.availableSeats - :count WHERE t.id = :id")
     void lockSeats(Long id, String bookedSeats, int count);
+
+    @Query("SELECT t FROM Trip t WHERE LOWER(t.route.fromCity) LIKE %:q% " +
+           "OR LOWER(t.route.toCity) LIKE %:q% OR CAST(t.tripDate AS string) LIKE %:q%")
+    List<Trip> searchByKeyword(String q);
+
+    long countByStatus(Trip.Status status);
 }

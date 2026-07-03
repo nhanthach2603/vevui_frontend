@@ -146,6 +146,13 @@ public class TripController {
         return ResponseEntity.status(HttpStatus.CREATED).body(tripService.createBus(req));
     }
 
+    @PutMapping("/api/admin/buses/{id}")
+    public ResponseEntity<TripDto.BusDto> updateBus(
+            @PathVariable Long id,
+            @RequestBody TripDto.CreateBusRequest req) {
+        return ResponseEntity.ok(tripService.updateBus(id, req));
+    }
+
     @DeleteMapping("/api/admin/buses/{id}")
     public ResponseEntity<Map<String, String>> deleteBus(@PathVariable Long id) {
         tripService.deleteBus(id);
@@ -161,10 +168,26 @@ public class TripController {
         return ResponseEntity.ok(tripService.getAllTripsAdmin(PageRequest.of(page, size)));
     }
 
+    @GetMapping("/api/admin/trips/search")
+    public ResponseEntity<List<TripDto.TripResponse>> searchTripsAdmin(
+            @RequestParam String q) {
+        return ResponseEntity.ok(tripService.searchTripsAdmin(q));
+    }
+
     @PostMapping("/api/admin/trips")
     public ResponseEntity<TripDto.TripResponse> createTrip(
             @RequestBody TripDto.CreateTripRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(tripService.createTrip(req));
+    }
+
+    @GetMapping("/api/admin/trips/stats")
+    public ResponseEntity<TripDto.TripStatsResponse> getTripStats() {
+        return ResponseEntity.ok(tripService.getTripStats());
+    }
+
+    @GetMapping("/api/admin/trips/{id}")
+    public ResponseEntity<TripDto.TripResponse> getTripByIdAdmin(@PathVariable Long id) {
+        return ResponseEntity.ok(tripService.getTripById(id));
     }
 
     @PutMapping("/api/admin/trips/{id}")
@@ -174,26 +197,6 @@ public class TripController {
         return ResponseEntity.ok(tripService.updateTrip(id, req));
     }
 
-    @PutMapping("/api/admin/buses/{id}")
-    public ResponseEntity<TripDto.BusDto> updateBus(
-            @PathVariable Long id,
-            @RequestBody TripDto.CreateBusRequest req) {
-        return ResponseEntity.ok(tripService.updateBus(id, req));
-    }
-
-    @DeleteMapping("/api/admin/trips/{id}")
-    public ResponseEntity<Map<String, String>> deleteTrip(@PathVariable Long id) {
-        tripService.deleteTrip(id);
-        return ResponseEntity.ok(Map.of("message", "Chuyến đi đã được hủy"));
-    }
-
-    // ── Admin: Trip Detail & Status ──
-
-    @GetMapping("/api/admin/trips/{id}")
-    public ResponseEntity<TripDto.TripResponse> getTripByIdAdmin(@PathVariable Long id) {
-        return ResponseEntity.ok(tripService.getTripById(id));
-    }
-
     @PutMapping("/api/admin/trips/{id}/status")
     public ResponseEntity<TripDto.TripResponse> updateTripStatus(
             @PathVariable Long id,
@@ -201,9 +204,10 @@ public class TripController {
         return ResponseEntity.ok(tripService.updateTripStatus(id, req.getStatus()));
     }
 
-    @GetMapping("/api/admin/trips/stats")
-    public ResponseEntity<TripDto.TripStatsResponse> getTripStats() {
-        return ResponseEntity.ok(tripService.getTripStats());
+    @DeleteMapping("/api/admin/trips/{id}")
+    public ResponseEntity<Map<String, String>> deleteTrip(@PathVariable Long id) {
+        tripService.deleteTrip(id);
+        return ResponseEntity.ok(Map.of("message", "Chuyến đi đã được hủy"));
     }
 
     // ── Admin: Bus Detail & Status ──

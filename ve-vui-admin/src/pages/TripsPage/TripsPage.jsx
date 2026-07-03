@@ -43,7 +43,7 @@ const TripsPage = () => {
       if (tripsData?.content) setTrips(tripsData.content);
       if (Array.isArray(routesData)) setRoutes(routesData);
       if (Array.isArray(busesData)) setBuses(busesData);
-      if (statsData) setStats({ total: statsData.total ?? 0, active: statsData.active ?? 0, cancelled: statsData.cancelled ?? 0 });
+      if (statsData) setStats({ total: statsData.total ?? 0, scheduled: statsData.scheduled ?? 0, departed: statsData.departed ?? 0, cancelled: statsData.cancelled ?? 0 });
       setLoading(false);
     });
   }, []);
@@ -58,7 +58,8 @@ const TripsPage = () => {
 
   const computedStats = {
     total: stats.total || trips.length,
-    active: stats.active || trips.filter(t => t.status === 'SCHEDULED').length,
+    scheduled: stats.scheduled || trips.filter(t => t.status === 'SCHEDULED').length,
+    departed: stats.departed || trips.filter(t => t.status === 'DEPARTED').length,
     cancelled: stats.cancelled || trips.filter(t => t.status === 'CANCELLED').length,
   };
 
@@ -135,7 +136,7 @@ const TripsPage = () => {
       </div>
 
       {/* Stats Row */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:'var(--sp-4)', marginBottom:'var(--sp-5)' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(180px,1fr))', gap:'var(--sp-4)', marginBottom:'var(--sp-5)' }}>
         <div className="a-card" style={{ padding:'var(--sp-4) var(--sp-5)', display:'flex', alignItems:'center', gap:'var(--sp-3)' }}>
           <div style={{ width:40, height:40, background:'var(--primary-bg)', borderRadius:'var(--r-md)', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--primary)', flexShrink:0 }}>
             <FiActivity />
@@ -150,8 +151,17 @@ const TripsPage = () => {
             <FiCheckCircle />
           </div>
           <div>
-            <div style={{ fontSize:'0.75rem', color:'var(--gray-500)', fontWeight:600 }}>Dang hoat dong</div>
-            <div style={{ fontSize:'1.5rem', fontWeight:900, color:'var(--success)' }}>{computedStats.active}</div>
+            <div style={{ fontSize:'0.75rem', color:'var(--gray-500)', fontWeight:600 }}>Da dat</div>
+            <div style={{ fontSize:'1.5rem', fontWeight:900, color:'var(--success)' }}>{computedStats.scheduled}</div>
+          </div>
+        </div>
+        <div className="a-card" style={{ padding:'var(--sp-4) var(--sp-5)', display:'flex', alignItems:'center', gap:'var(--sp-3)' }}>
+          <div style={{ width:40, height:40, background:'#FEF9C3', borderRadius:'var(--r-md)', display:'flex', alignItems:'center', justifyContent:'center', color:'#D97706', flexShrink:0 }}>
+            <FiCalendar />
+          </div>
+          <div>
+            <div style={{ fontSize:'0.75rem', color:'var(--gray-500)', fontWeight:600 }}>Da khoi hanh</div>
+            <div style={{ fontSize:'1.5rem', fontWeight:900, color:'#D97706' }}>{computedStats.departed}</div>
           </div>
         </div>
         <div className="a-card" style={{ padding:'var(--sp-4) var(--sp-5)', display:'flex', alignItems:'center', gap:'var(--sp-3)' }}>

@@ -165,6 +165,13 @@ public class TripService {
         return tripRepository.findAll(pageable).map(this::toTripResponse);
     }
 
+    /** Admin: tìm chuyến theo keyword (fromCity, toCity, tripDate) */
+    public List<TripDto.TripResponse> searchTripsAdmin(String q) {
+        return tripRepository.searchByKeyword(q.toLowerCase()).stream()
+                .map(this::toTripResponse)
+                .collect(Collectors.toList());
+    }
+
     /** Admin: xóa chuyến đi (soft delete — đặt status = CANCELLED) */
     @CacheEvict(value = "trips", allEntries = true)
     public void deleteTrip(Long id) {
@@ -339,12 +346,12 @@ public class TripService {
     }
 
     public TripDto.TripStatsResponse getTripStats() {
-        List<Trip> all = tripRepository.findAll();
         return TripDto.TripStatsResponse.builder()
-                .total(all.size())
-                .active(all.stream().filter(t -> t.getStatus() == Trip.Status.SCHEDULED).count())
-                .cancelled(all.stream().filter(t -> t.getStatus() == Trip.Status.CANCELLED).count())
-                .completed(all.stream().filter(t -> t.getStatus() == Trip.Status.COMPLETED).count())
+                .total(tripRepository.count())
+                .scheduled(tripRepository.countByStatus(Trip.Status.SCHEDULED))
+                .departed(tripRepository.countByStatus(Trip.Status.DEPARTED))
+                .cancelled(tripRepository.countByStatus(Trip.Status.CANCELLED))
+                .completed(tripRepository.countByStatus(Trip.Status.COMPLETED))
                 .build();
     }
 

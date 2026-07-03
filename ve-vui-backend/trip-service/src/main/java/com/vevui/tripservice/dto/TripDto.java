@@ -155,7 +155,8 @@ public class TripDto {
     @AllArgsConstructor
     public static class TripStatsResponse {
         private long total;
-        private long active;
+        private long scheduled;
+        private long departed;
         private long cancelled;
         private long completed;
     }

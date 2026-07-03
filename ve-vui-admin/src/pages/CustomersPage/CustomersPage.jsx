@@ -1,6 +1,6 @@
 // pages/CustomersPage/CustomersPage.jsx
 import { useEffect, useState, useCallback } from 'react';
-import { FiSearch, FiEye, FiUsers, FiUserCheck, FiUserX, FiTrash2, FiTicket, FiBan, FiCheckCircle } from 'react-icons/fi';
+import { FiSearch, FiEye, FiUsers, FiUserCheck, FiUserX, FiTrash2, FiTag, FiLock, FiUnlock } from 'react-icons/fi';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { fetchUsers, searchUsers, updateUserStatus, deleteUser, fetchUserTickets } from '../../services/apiService';
 import StatusBadge from '../../components/ui/StatusBadge';
@@ -196,7 +196,7 @@ const CustomersPage = () => {
                         id={`tickets-customer-${c.id}`}
                         title="Xem vé"
                       >
-                        <FiTicket size={14}/>
+                        <FiTag size={14}/>
                       </button>
                       <button
                         className={`a-btn a-btn-sm ${c.status==='ACTIVE'?'a-btn-ghost':'a-btn-success'}`}
@@ -206,7 +206,7 @@ const CustomersPage = () => {
                         id={`toggle-customer-${c.id}`}
                         title={c.status==='ACTIVE'?'Khóa':'Kích hoạt'}
                       >
-                        {actionLoading === c.id ? '...' : (c.status==='ACTIVE' ? <><FiBan size={12}/> Khóa</> : <><FiCheckCircle size={12}/> Mở khóa</>)}
+                        {actionLoading === c.id ? '...' : (c.status==='ACTIVE' ? <><FiLock size={12}/> Khóa</> : <><FiUnlock size={12}/> Mở khóa</>)}
                       </button>
                       <button
                         className="a-btn a-btn-ghost a-btn-sm a-btn-icon"

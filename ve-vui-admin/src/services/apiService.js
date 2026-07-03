@@ -63,6 +63,7 @@ export const deleteTrip  = (id) => apiFetch(`/api/admin/trips/${id}`, { method: 
 export const fetchTripById    = (id) => apiFetch(`/api/admin/trips/${id}`);
 export const updateTripStatus = (id, status) => apiFetch(`/api/admin/trips/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
 export const fetchTripStats   = () => apiFetch('/api/admin/trips/stats');
+export const searchTripsAdmin = (q) => apiFetch(`/api/admin/trips/search?q=${encodeURIComponent(q)}`);
 
 // ── Buses (new) ──
 export const fetchBusById     = (id) => apiFetch(`/api/admin/buses/${id}`);
