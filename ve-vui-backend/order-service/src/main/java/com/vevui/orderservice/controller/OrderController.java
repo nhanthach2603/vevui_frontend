@@ -66,17 +66,32 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getStats());
     }
 
-    // ── Admin: Ticket Detail & Status ──
-
-    @GetMapping("/api/admin/tickets/{id}")
-    public ResponseEntity<OrderDto.TicketResponse> getTicketByIdAdmin(@PathVariable String id) {
-        return ResponseEntity.ok(orderService.getTicketById(id));
-    }
+    // ── Admin: Search & Export (before /{id}) ──
 
     @GetMapping("/api/admin/tickets/search")
     public ResponseEntity<List<OrderDto.TicketResponse>> searchTicketsAdmin(
             @RequestParam String q) {
         return ResponseEntity.ok(orderService.searchTicketsAdmin(q));
+    }
+
+    @GetMapping("/api/admin/tickets/export")
+    public ResponseEntity<List<OrderDto.TicketResponse>> exportTickets() {
+        return ResponseEntity.ok(orderService.exportTickets());
+    }
+
+    // ── Admin: Ticket CRUD ──
+
+    @PostMapping("/api/admin/tickets")
+    public ResponseEntity<OrderDto.TicketResponse> createTicketAdmin(
+            @RequestBody OrderDto.CreateTicketRequest request) {
+        log.info("POST /api/admin/tickets for trip={}", request.getTripId());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(orderService.createTicket(request));
+    }
+
+    @GetMapping("/api/admin/tickets/{id}")
+    public ResponseEntity<OrderDto.TicketResponse> getTicketByIdAdmin(@PathVariable String id) {
+        return ResponseEntity.ok(orderService.getTicketById(id));
     }
 
     @PutMapping("/api/admin/tickets/{id}/status")
@@ -86,9 +101,10 @@ public class OrderController {
         return ResponseEntity.ok(orderService.updateTicketStatus(id, req.getStatus()));
     }
 
-    @GetMapping("/api/admin/tickets/export")
-    public ResponseEntity<List<OrderDto.TicketResponse>> exportTickets() {
-        return ResponseEntity.ok(orderService.exportTickets());
+    @DeleteMapping("/api/admin/tickets/{id}")
+    public ResponseEntity<Map<String, String>> deleteTicket(@PathVariable String id) {
+        orderService.deleteTicket(id);
+        return ResponseEntity.ok(Map.of("message", "Vé đã được xóa"));
     }
 
     // ── Payment Endpoints ──

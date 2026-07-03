@@ -44,12 +44,17 @@ public class OrderService {
     public OrderDto.TicketResponse createTicket(OrderDto.CreateTicketRequest req) {
         log.info("Creating ticket for trip {} seats {}", req.getTripId(), req.getSeats());
 
-        // 1. Lock seats via Feign (synchronous call to trip-service)
-        SeatLockDto.SeatLockResponse lockResult = tripServiceClient.lockSeats(
-            req.getTripId(), req.getSeats());
+        // 1. Lock seats via Feign (skip if admin bypass)
+        boolean skipLock = Boolean.TRUE.equals(req.getSkipLock());
+        if (!skipLock) {
+            SeatLockDto.SeatLockResponse lockResult = tripServiceClient.lockSeats(
+                req.getTripId(), req.getSeats());
 
-        if (!lockResult.isSuccess()) {
-            throw new IllegalStateException("Không thể đặt ghế: " + lockResult.getMessage());
+            if (!lockResult.isSuccess()) {
+                throw new IllegalStateException("Không thể đặt ghế: " + lockResult.getMessage());
+            }
+        } else {
+            log.info("Admin skipLock=true — bypassing seat lock for trip {}", req.getTripId());
         }
 
         // 2. Apply coupon if provided
@@ -212,11 +217,7 @@ public class OrderService {
     // ── Admin: Ticket Operations ──
 
     public List<OrderDto.TicketResponse> searchTicketsAdmin(String q) {
-        String lower = q.toLowerCase();
-        return ticketRepository.findAll().stream()
-                .filter(t -> (t.getCustomerName() != null && t.getCustomerName().toLowerCase().contains(lower))
-                        || (t.getPhone() != null && t.getPhone().contains(lower))
-                        || (t.getId() != null && t.getId().toLowerCase().contains(lower)))
+        return ticketRepository.searchAdmin(q.toLowerCase()).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
@@ -228,6 +229,15 @@ public class OrderService {
         ticket.setStatus(Ticket.Status.valueOf(status));
         log.info("Ticket {} status updated to {}", id, status);
         return toResponse(ticketRepository.save(ticket));
+    }
+
+    @Transactional
+    public void deleteTicket(String id) {
+        if (!ticketRepository.existsById(id)) {
+            throw new IllegalArgumentException("Không tìm thấy vé: " + id);
+        }
+        ticketRepository.deleteById(id);
+        log.info("Ticket {} deleted", id);
     }
 
     public List<OrderDto.TicketResponse> exportTickets() {

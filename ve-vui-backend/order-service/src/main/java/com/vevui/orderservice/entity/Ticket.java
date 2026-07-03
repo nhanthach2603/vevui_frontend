@@ -70,6 +70,6 @@ public class Ticket {
     private LocalDateTime updatedAt;
 
     public enum Status {
-        PENDING, CONFIRMED, CANCELLED, REFUNDED
+        PENDING, CONFIRMED, CANCELLED, REFUNDED, USED
     }
 }

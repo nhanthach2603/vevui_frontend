@@ -23,6 +23,7 @@ public class OrderDto {
         private BigDecimal totalPrice;
         private String paymentMethod;
         private String couponCode;    // optional
+        private Boolean skipLock;     // admin: bypass seat lock (default false)
 
         // Denormalized trip info from frontend
         private String fromCity;
