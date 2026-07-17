@@ -18,6 +18,7 @@ public class TripDto {
         private String stops;
         private String imageUrl;
         private Boolean popular;
+        private Boolean active;
     }
 
     @Data
@@ -30,6 +31,7 @@ public class TripDto {
         private String stops;
         private String imageUrl;
         private Boolean popular;
+        private Boolean active;
     }
 
     @Data
@@ -42,6 +44,16 @@ public class TripDto {
         private String busTypeName;
         private String busTypeCode;
         private Integer totalSeats;
+        private String violationDate;
+        private String violationExpiry;
+        private String violationReason;
+    }
+
+    @Data
+    public static class UpdateBusViolationRequest {
+        private String violationDate;
+        private String violationExpiry;
+        private String violationReason;
     }
 
     @Data
@@ -80,6 +92,7 @@ public class TripDto {
         private Integer availableSeats;
         private List<String> bookedSeats;
         private String status;
+        private String realTimeStatus;
         private RouteDto route;
         private BusDto bus;
     }
@@ -95,12 +108,74 @@ public class TripDto {
     }
 
     @Data
+    public static class BatchCreateTripRequest {
+        private List<CreateTripRequest> trips;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class BatchCreateTripResponse {
+        private int created;
+        private int failed;
+        private List<String> errors;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class AvailableDateDto {
+        private String date;
+        private int tripCount;
+    }
+
+    @Data
     public static class PickupPointDto {
         private Long id;
         private String city;
         private String name;
         private String timeOffset;
         private String type;
+    }
+
+    @Data
+    public static class CreatePickupPointRequest {
+        private String city;
+        private String name;
+        private String timeOffset;
+        private String type; // PICKUP, DROPOFF, BOTH
+    }
+
+    @Data
+    public static class UpdatePickupPointRequest {
+        private String city;
+        private String name;
+        private String timeOffset;
+        private String type;
+        private Boolean active;
+    }
+
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class TripPickupPointDto {
+        private Long id;
+        private Long tripId;
+        private Long pickupPointId;
+        private String pickupPointName;
+        private String city;
+        private String timeOffset;
+        private String type;       // PICKUP, DROPOFF, BOTH
+        private String role;       // PICKUP, DROPOFF (trip's usage)
+    }
+
+    @Data
+    public static class SaveTripPickupPointsRequest {
+        private List<Long> pickupPointIds;   // IDs of pickup points with role PICKUP
+        private List<Long> dropoffPointIds;  // IDs of pickup points with role DROPOFF
     }
 
     @Data
@@ -164,5 +239,18 @@ public class TripDto {
     @Data
     public static class UpdateBusStatusRequest {
         private String status;
+    }
+
+    @Data
+    public static class CityDto {
+        private Long id;
+        private String name;
+        private Boolean active;
+    }
+
+    @Data
+    public static class CreateCityRequest {
+        private String name;
+        private Boolean active;
     }
 }

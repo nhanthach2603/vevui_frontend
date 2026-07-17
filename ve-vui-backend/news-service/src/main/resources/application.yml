@@ -1,39 +1,60 @@
+# ╔══════════════════════════════════════════════════════════╗
+#  News Service — Cấu hình Spring Boot
+#  Port: 8812 | Database: db_news | Cache: Redis
+# ╚══════════════════════════════════════════════════════════╝
+
 server:
-  port: 8812
+  port: 8812  # Port mà News Service lắng nghe HTTP request
 
 spring:
   application:
-    name: news-service
+    name: news-service  # Tên đăng ký lên Eureka (dùng cho Service Discovery)
+
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/db_news?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
-    username: ${DB_USER:root}
-    password: ${DB_PASS:vevui123}
+    # Kết nối MySQL db_news
+    # characterEncoding=UTF-8: QUAN TRỌNG — xử lý dấu tiếng Việt trong nội dung bài viết
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/db_news?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&characterEncoding=UTF-8&useUnicode=true&characterSetResults=utf8mb4&connectionCollation=utf8mb4_unicode_ci
+    username: ${DB_USER:vevui}      # Dùng user vevui (non-root) để --init-connect SET NAMES utf8mb4 chạy
+    password: ${DB_PASS:vevui123}  # Password MySQL
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      connection-init-sql: SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci
+      data-source-properties:
+        characterEncoding: UTF-8
+        useUnicode: "true"
+        characterSetResults: UTF-8
+        connectionCollation: utf8mb4_unicode_ci
+
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: false
+      ddl-auto: update  # Tự động update schema khi khởi động
+    show-sql: false      # Không log SQL ra console
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+
   data:
     redis:
+      # Redis Cache — dùng cho @Cacheable, @CacheEvict
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
+# Eureka Client — Đăng ký service lên Eureka Server
 eureka:
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: true  # Ưu tiên IP thay vì hostname
 
+# Management — Endpoints giám sát
 management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: health, info  # Chỉ expose health + info
 
+# Logging
 logging:
   level:
-    com.vevui.newsservice: DEBUG
+    com.vevui.newsservice: DEBUG  # Log DEBUG cho news-service

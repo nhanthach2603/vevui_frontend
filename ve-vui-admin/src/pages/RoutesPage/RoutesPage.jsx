@@ -80,8 +80,8 @@ const RoutesPage = () => {
 
       {/* Search */}
       <div className="a-card" style={{ marginBottom: 'var(--sp-5)' }}>
-        <div className="a-card-body" style={{ padding: '1rem 1.5rem' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:8, maxWidth:360 }}>
+        <div className="a-card-body card-filter-body">
+          <div className="filter-bar search-box" style={{ maxWidth:360 }}>
             <FiSearch style={{ color:'var(--gray-400)', flexShrink:0 }} />
             <input className="a-input" placeholder="Tìm tuyến đường..." value={search} onChange={e => setSearch(e.target.value)} id="route-search" style={{ border:'none', boxShadow:'none', padding:'4px 0', fontSize:'0.9rem' }} />
           </div>
@@ -89,8 +89,8 @@ const RoutesPage = () => {
       </div>
 
       {/* Table */}
-      <div className="a-card">
-        <div style={{ overflowX:'auto' }}>
+        <div className="a-card">
+        <div className="a-card-scroll">
           <table className="a-table">
             <thead>
               <tr>
@@ -123,7 +123,7 @@ const RoutesPage = () => {
                     </span>
                   </td>
                   <td>
-                    <div style={{ display:'flex', gap:6 }}>
+                    <div className="action-row">
                       <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => openEdit(r)} id={`edit-route-${r.id}`}>
                         <FiEdit2 size={14}/>
                       </button>

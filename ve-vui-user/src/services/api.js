@@ -77,6 +77,12 @@ export const authApi = {
   register: (data) =>
     request('/api/auth/register', { method: 'POST', body: JSON.stringify(data) }),
 
+  registerSendOtp: (data) =>
+    request('/api/auth/register-send-otp', { method: 'POST', body: JSON.stringify(data) }),
+
+  registerVerify: (email, code) =>
+    request('/api/auth/register-verify', { method: 'POST', body: JSON.stringify({ email, code }) }),
+
   login: (data) =>
     request('/api/auth/login', { method: 'POST', body: JSON.stringify(data) }),
 
@@ -88,6 +94,18 @@ export const authApi = {
 
   updateProfile: (id, data) =>
     request(`/api/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }, true),
+
+  forgotPassword: (email) =>
+    request('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+
+  verifyOtp: (email, code) =>
+    request('/api/auth/verify-otp', { method: 'POST', body: JSON.stringify({ email, code }) }),
+
+  resetPassword: (email, code, newPassword) =>
+    request('/api/auth/reset-password', { method: 'POST', body: JSON.stringify({ email, code, newPassword }) }),
+
+  changePassword: (oldPassword, newPassword) =>
+    request('/api/auth/change-password', { method: 'POST', body: JSON.stringify({ oldPassword, newPassword }) }, true),
 };
 
 // ─── TRIPS ────────────────────────────────────────────────────────────────────
@@ -131,6 +149,15 @@ export const tripApi = {
 
   getPickupPoints: (city) =>
     request(`/api/pickup-points?city=${encodeURIComponent(city)}`),
+
+  getSchedule: () =>
+    request('/api/trips/schedule').then(list => (list || []).map(mapTrip)),
+
+  getAvailableDates: (from, to, month) => {
+    const params = new URLSearchParams({ from, to });
+    if (month) params.set('month', month);
+    return request(`/api/trips/available-dates?${params.toString()}`);
+  },
 };
 
 // ─── ROUTES ───────────────────────────────────────────────────────────────────
@@ -232,9 +259,17 @@ export const paymentApi = {
 
 // ─── NEWS ─────────────────────────────────────────────────────────────────────
 export const newsApi = {
-  getAll: () => request('/api/news').then(res => res?.content || res || []),
+  getAll: (page = 0, size = 10) =>
+    request(`/api/news?page=${page}&size=${size}`)
+      .then(res => ({ items: res?.content || [], totalPages: res?.totalPages || 1, totalElements: res?.totalElements || 0 })),
   getById: (id) => request(`/api/news/${id}`),
   getBySlug: (slug) => request(`/api/news?slug=${encodeURIComponent(slug)}`).then(res => res?.content?.[0] || res || null),
+  getCategories: () => request('/api/news/categories').then(res => res || []),
+};
+
+// ─── CITIES ───────────────────────────────────────────────────────────────────
+export const cityApi = {
+  getAll: () => request('/api/cities').then(res => res || []),
 };
 
 // ─── Utility ──────────────────────────────────────────────────────────────────

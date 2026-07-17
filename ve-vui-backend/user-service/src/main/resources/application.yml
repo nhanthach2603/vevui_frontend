@@ -31,6 +31,23 @@ jwt:
   access-token-expiration: 86400000    # 24 hours
   refresh-token-expiration: 604800000  # 7 days
 
+# SMTP Gmail — dùng App Password (Google Account > Security > 2FA > App Passwords)
+# Set env vars: MAIL_USERNAME, MAIL_PASSWORD
+spring.mail:
+  host: smtp.gmail.com
+  port: 587
+  username: ${MAIL_USERNAME:}
+  password: ${MAIL_PASSWORD:}
+  properties:
+    mail:
+      smtp:
+        auth: true
+        starttls:
+          enable: true
+
+otp:
+  expiration-minutes: 5
+
 management:
   endpoints:
     web:

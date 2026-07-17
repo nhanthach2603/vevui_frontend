@@ -1,24 +1,62 @@
+# ╔══════════════════════════════════════════════════════════╗
+#  API Gateway — Cấu hình Spring Cloud Gateway
+#  Port: 8900 | Routes → 5 microservices via Eureka
+# ╚══════════════════════════════════════════════════════════╝
+
 server:
-  port: 8900
+  port: 8900  # Port của API Gateway — frontend gọi vào đây
 
 spring:
   application:
-    name: api-gateway
+    name: api-gateway  # Tên đăng ký lên Eureka
+
   cloud:
     gateway:
+      # ════════════════════════════════════════════════════
+      # CORS — Cross-Origin Resource Sharing
+      # ════════════════════════════════════════════════════
+      # Gateway xử lý CORS tập trung → các service con KHÔNG cần config CORS
+      #
+      # allowedOrigins: frontend domains được phép gọi API
+      #   localhost:5173 → ve-vui-user (Vite default)
+      #   localhost:5174 → ve-vui-admin
+      #   localhost:3000 →备用
+      # allowedMethods: "*" → cho phép GET, POST, PUT, DELETE, OPTIONS...
+      # allowCredentials: true → cho phép gửi cookies/authorization headers
+      # maxAge: 3600 → cache preflight request 1 giờ (giảm số lượng OPTIONS request)
       globalcors:
         cors-configurations:
           '[/**]':
             allowedOrigins:
-              - "http://localhost:5173"   # ve-vui-user (vite default)
+              - "http://localhost:5173"   # ve-vui-user (Vite default)
               - "http://localhost:5174"   # ve-vui-admin
               - "http://localhost:3000"
             allowedMethods: "*"
             allowedHeaders: "*"
             allowCredentials: true
             maxAge: 3600
+
+      # ════════════════════════════════════════════════════
+      # ROUTES — Định tuyến request đến microservice
+      # ════════════════════════════════════════════════════
+      #
+      # Mỗi route có 3 thành phần chính:
+      # - id        : tên route (unique, dùng để log/debug)
+      # - uri       : địa chỉ service đích (lb:// = load-balanced via Eureka)
+      # - predicates: điều kiện match path
+      # - filters   : bộ lọc (StripPrefix=0 = giữ nguyên path)
+      #
+      # lb:// = Load Balanced: Gateway tìm service qua Eureka
+      #   → Nếu service chạy nhiều instances → tự load-balance
+      #   → Nếu service chết → tự chuyển sang instance khác
+      #
+      # StripPrefix=0: KHÔNG cắt prefix
+      #   VD: /api/trips/search → forward nguyên vẹn đến trip-service
+      #   (Nếu StripPrefix=1 sẽ cắt "/api" → chỉ còn "/trips/search")
       routes:
-        # ── User Service ──
+        # ── User Service (port 8811) ──
+        # Xử lý: đăng nhập, đăng ký, quản lý người dùng
+
         - id: user-service-auth
           uri: lb://user-service
           predicates:
@@ -33,7 +71,9 @@ spring:
           filters:
             - StripPrefix=0
 
-        # ── Trip Service ──
+        # ── Trip Service (port 8810) ──
+        # Xử lý: tuyến xe, xe, chuyến đi, điểm đón/trả
+
         - id: trip-service-routes
           uri: lb://trip-service
           predicates:
@@ -62,14 +102,24 @@ spring:
           filters:
             - StripPrefix=0
 
-        - id: trip-service-admin
+        - id: trip-service-cities
           uri: lb://trip-service
           predicates:
-            - Path=/api/admin/routes/**, /api/admin/buses/**, /api/admin/trips/**, /api/admin/bus-types/**
+            - Path=/api/cities/**
           filters:
             - StripPrefix=0
 
-        # ── Order Service ──
+        # Trip Service Admin: quản lý tuyến, xe, chuyến, loại xe
+        - id: trip-service-admin
+          uri: lb://trip-service
+          predicates:
+            - Path=/api/admin/routes/**, /api/admin/buses/**, /api/admin/trips/**, /api/admin/bus-types/**, /api/admin/pickup-points/**, /api/admin/cities/**
+          filters:
+            - StripPrefix=0
+
+        # ── Order Service (port 8813) ──
+        # Xử lý: đặt vé, thanh toán, quản lý vé
+
         - id: order-service-tickets
           uri: lb://order-service
           predicates:
@@ -84,6 +134,7 @@ spring:
           filters:
             - StripPrefix=0
 
+        # Order Service Admin: quản lý vé + thống kê
         - id: order-service-admin-tickets
           uri: lb://order-service
           predicates:
@@ -98,7 +149,8 @@ spring:
           filters:
             - StripPrefix=0
 
-        # ── User Service Admin ──
+        # ── User Service Admin (port 8811) ──
+        # Quản lý người dùng: phân quyền, khóa/mở tài khoản
         - id: user-service-admin
           uri: lb://user-service
           predicates:
@@ -106,38 +158,60 @@ spring:
           filters:
             - StripPrefix=0
 
-        # ── News Service ──
+        # ── News Service (port 8812) ──
+        # Xử lý: tin tức, khuyến mãi (công khai + admin)
+
         - id: news-service
           uri: lb://news-service
           predicates:
-            - Path=/api/news/**, /api/admin/news/**
+            - Path=/api/news/**, /api/admin/news/**, /api/admin/news-categories/**
           filters:
             - StripPrefix=0
 
+      # Filters mặc định áp dụng cho tất cả routes (hiện tại rỗng)
       default-filters: []
 
+  # Redis — dùng cho rate limiting (nếu cần) và caching
   data:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
+# ════════════════════════════════════════════════════════════
+# Eureka Client — Tìm service qua Service Discovery
+# ════════════════════════════════════════════════════════════
 eureka:
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: true  # Ưu tiên IP thay vì hostname
 
+# ════════════════════════════════════════════════════════════
+# JWT — Secret key để verify token
+# ════════════════════════════════════════════════════════════
+# ⚠️ CRITICAL: Secret key PHẢI giống với auth-service đang dùng để tạo token
+# Nếu khác → verify sẽ fail → mọi request đều 401
+#
+# Format: String >= 32 bytes (256 bits) cho HMAC-SHA256
+# Trong production: set env variable JWT_SECRET thay vì hardcode
 jwt:
   secret: ${JWT_SECRET:vevui-super-secret-key-for-jwt-authentication-2024-please-change-in-production}
 
+# ════════════════════════════════════════════════════════════
+# Management — Endpoints giám sát
+# ════════════════════════════════════════════════════════════
 management:
   endpoints:
     web:
       exposure:
         include: health, info, gateway
+        # health  : health check (up/down)
+        # info    : application info
+        # gateway : xem tất cả routes đang có (GET /actuator/gateway/routes)
 
+# Logging
 logging:
   level:
-    org.springframework.cloud.gateway: INFO
-    com.vevui.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO  # Log routing decisions
+    com.vevui.gateway: DEBUG                 # Log JWT filter debug

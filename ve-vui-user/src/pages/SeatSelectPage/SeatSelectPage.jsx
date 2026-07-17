@@ -5,6 +5,7 @@ import { FiArrowRight, FiArrowLeft, FiInfo, FiRefreshCw } from 'react-icons/fi';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useBooking } from '../../context/BookingContext';
+import { useAuth } from '../../context/AuthContext';
 import { tripApi, formatPrice } from '../../services/api';
 import './SeatSelectPage.css';
 
@@ -39,12 +40,40 @@ const generateFallbackSeatMap = (busTypeCode, totalSeats, bookedSeats = []) => {
 const SeatSelectPage = () => {
   const { tripId } = useParams();
   const navigate   = useNavigate();
-  const { selectedSeats, selectedTrip, setTrip, toggleSeat, searchParams } = useBooking();
+  const { selectedSeats, selectedTrip, setTrip, toggleSeat, searchParams, setSearch } = useBooking();
+  const { isLoggedIn } = useAuth();
 
   const [seatMap, setSeatMap] = useState([]);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [loadingTrip, setLoadingTrip] = useState(false);
   const [error, setError] = useState('');
+
+  // Restore booking state from sessionStorage after login redirect
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('vevui_pending_booking');
+      if (!raw) return;
+      const pending = JSON.parse(raw);
+      if (pending.selectedTrip && String(pending.selectedTrip.id) === String(tripId)) {
+        setTrip(pending.selectedTrip);
+        if (pending.searchParams) setSearch(pending.searchParams);
+        // Store seats to restore after trip loads
+        sessionStorage.setItem('vevui_pending_seats', JSON.stringify(pending.selectedSeats));
+      }
+      sessionStorage.removeItem('vevui_pending_booking');
+    } catch { /* ignore */ }
+  }, [tripId]);
+
+  // Restore selected seats after trip loads from sessionStorage
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('vevui_pending_seats');
+      if (!raw || !selectedTrip || String(selectedTrip.id) !== String(tripId)) return;
+      const savedSeats = JSON.parse(raw);
+      savedSeats.forEach(seatId => toggleSeat(seatId));
+      sessionStorage.removeItem('vevui_pending_seats');
+    } catch { /* ignore */ }
+  }, [selectedTrip, tripId]);
 
   // Load trip nếu chưa có (ví dụ user truy cập trực tiếp qua URL)
   useEffect(() => {
@@ -102,7 +131,16 @@ const SeatSelectPage = () => {
 
   const handleContinue = () => {
     if (selectedSeats.length < 1) return;
-    navigate(`/dat-ve/${tripId}`);
+    if (!isLoggedIn) {
+      sessionStorage.setItem('vevui_pending_booking', JSON.stringify({
+        selectedTrip,
+        selectedSeats,
+        searchParams,
+      }));
+      navigate('/dang-nhap', { state: { from: '/chon-ghe/' + tripId } });
+      return;
+    }
+    navigate('/dat-ve/' + tripId);
   };
 
   if (loadingTrip) {

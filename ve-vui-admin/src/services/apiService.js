@@ -58,12 +58,14 @@ export const deleteBusType    = (id) => apiFetch(`/api/admin/bus-types/${id}`, {
 // ── Trips ──
 export const fetchTrips  = (page = 0, size = 50) => apiFetch(`/api/admin/trips?page=${page}&size=${size}`);
 export const createTrip  = (body) => apiFetch('/api/admin/trips', { method: 'POST', body: JSON.stringify(body) });
+export const batchCreateTrips = (body) => apiFetch('/api/admin/trips/batch', { method: 'POST', body: JSON.stringify(body) });
 export const updateTrip  = (id, body) => apiFetch(`/api/admin/trips/${id}`, { method: 'PUT', body: JSON.stringify(body) });
 export const deleteTrip  = (id) => apiFetch(`/api/admin/trips/${id}`, { method: 'DELETE' });
 export const fetchTripById    = (id) => apiFetch(`/api/admin/trips/${id}`);
 export const updateTripStatus = (id, status) => apiFetch(`/api/admin/trips/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
 export const fetchTripStats   = () => apiFetch('/api/admin/trips/stats');
 export const searchTripsAdmin = (q) => apiFetch(`/api/admin/trips/search?q=${encodeURIComponent(q)}`);
+export const fetchTripSeatMap = (id) => apiFetch(`/api/trips/${id}/seats`);
 
 // ── Buses (new) ──
 export const fetchBusById     = (id) => apiFetch(`/api/admin/buses/${id}`);
@@ -76,6 +78,7 @@ export const fetchTicketById  = (id) => apiFetch(`/api/admin/tickets/${id}`);
 export const searchTicketsAdmin = (q) => apiFetch(`/api/admin/tickets/search?q=${encodeURIComponent(q)}`);
 export const updateTicketStatus = (id, status) => apiFetch(`/api/admin/tickets/${id}/status`, { method: 'PUT', body: JSON.stringify({ status }) });
 export const exportTickets    = () => apiFetch('/api/admin/tickets/export');
+export const fetchTicketsByTripId = (tripId) => apiFetch(`/api/admin/tickets/trip/${tripId}`);
 
 // ── Users / Customers ──
 export const fetchUsers  = (page = 0, size = 100) => apiFetch(`/api/admin/users?page=${page}&size=${size}`);
@@ -107,7 +110,7 @@ export const deleteTicket         = (id)        => apiFetch(`/api/admin/tickets/
 export const createTicketAdmin    = (body)       => apiFetch('/api/admin/tickets', { method: 'POST', body: JSON.stringify(body) });
 
 // ═══════════════════════════════════
-// ── Quản lý Khách hàng (bổ sung Admin CRUD) ──
+// ── Quản lý Người dùng (bổ sung Admin CRUD) ──
 // ═══════════════════════════════════
 export const searchUsersAdmin   = (q)         => apiFetch(`/api/admin/users/search?q=${encodeURIComponent(q)}`);
 export const createUserAdmin    = (body)       => apiFetch('/api/admin/users', { method: 'POST', body: JSON.stringify(body) });
@@ -119,6 +122,36 @@ export const updateUserRole     = (id, role)   => apiFetch(`/api/admin/users/${i
 export const fetchNewsById      = (id)        => apiFetch(`/api/admin/news/${id}`);
 export const searchNewsAdmin    = (q)         => apiFetch(`/api/admin/news/search?q=${encodeURIComponent(q)}`);
 export const fetchNewsByCategory = (cat, page = 0, size = 10) => apiFetch(`/api/news/category/${encodeURIComponent(cat)}?page=${page}&size=${size}`);
+
+// ── Pickup Points ──
+export const fetchPickupPoints = (city) => apiFetch(`/api/admin/pickup-points${city ? `?city=${encodeURIComponent(city)}` : ''}`);
+export const fetchPickupPointsByCity = (city) => apiFetch(`/api/pickup-points?city=${encodeURIComponent(city)}`);
+export const createPickupPoint = (body) => apiFetch('/api/admin/pickup-points', { method: 'POST', body: JSON.stringify(body) });
+export const updatePickupPoint = (id, body) => apiFetch(`/api/admin/pickup-points/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deletePickupPoint = (id) => apiFetch(`/api/admin/pickup-points/${id}`, { method: 'DELETE' });
+
+// ── Trip Pickup Points ──
+export const fetchTripPickupPoints = (tripId) => apiFetch(`/api/admin/trips/${tripId}/pickup-points`);
+export const saveTripPickupPoints = (tripId, body) => apiFetch(`/api/admin/trips/${tripId}/pickup-points`, { method: 'POST', body: JSON.stringify(body) });
+
+// ── Active & Completed Trips ──
+export const fetchActiveTrips = () => apiFetch('/api/admin/trips/active');
+export const fetchCompletedTrips = (q, date) => {
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (date) params.set('date', date);
+  const qs = params.toString();
+  return apiFetch(`/api/admin/trips/completed${qs ? `?${qs}` : ''}`);
+};
+export const confirmTripCompleted = (id) => apiFetch(`/api/admin/trips/${id}/confirm-completed`, { method: 'PUT' });
+
+// ── Cities ──
+export const fetchCities = () => apiFetch('/api/cities');
+export const fetchCitiesAdmin = () => apiFetch('/api/admin/cities');
+export const createCity = (body) => apiFetch('/api/admin/cities', { method: 'POST', body: JSON.stringify(body) });
+export const updateCity = (id, body) => apiFetch(`/api/admin/cities/${id}`, { method: 'PUT', body: JSON.stringify(body) });
+export const deleteCity = (id) => apiFetch(`/api/admin/cities/${id}`, { method: 'DELETE' });
+export const permanentDeleteCity = (id) => apiFetch(`/api/admin/cities/${id}/permanent`, { method: 'DELETE' });
 
 // ── Format helpers ──
 export const formatPrice = (p) =>

@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface PickupPointRepository extends JpaRepository<PickupPoint, Long> {
     List<PickupPoint> findByCityAndActiveTrueOrderByTimeOffset(String city);
+    List<PickupPoint> findByCityOrderByName(String city);
+    List<PickupPoint> findAllByOrderByCityAsc();
 }

@@ -41,6 +41,9 @@ FROM eclipse-temurin:17-jre-alpine
 
 ARG SERVICE
 ENV SERVICE_NAME=${SERVICE}
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV JAVA_OPTS="-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8"
 
 RUN apk add --no-cache curl
 
@@ -56,4 +59,4 @@ COPY --from=build /workspace/${SERVICE}/target/*.jar app.jar
 # Expose port (override tại docker-compose)
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "-Djava.security.egd=file:/dev/./urandom", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar -Djava.security.egd=file:/dev/./urandom app.jar"]

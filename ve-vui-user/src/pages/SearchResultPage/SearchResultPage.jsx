@@ -5,6 +5,7 @@ import { FiClock, FiMapPin, FiUsers, FiFilter, FiArrowRight, FiChevronDown, FiAl
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import SearchBox from '../../components/ui/SearchBox';
+import Pagination from '../../components/ui/Pagination';
 import { tripApi, formatPrice, formatDuration } from '../../services/api';
 import { useBooking } from '../../context/BookingContext';
 import './SearchResultPage.css';
@@ -18,10 +19,79 @@ const BUS_TYPE_LABEL = {
 
 const TripCard = ({ trip, onSelect }) => {
   const [expanded, setExpanded] = useState(false);
+  const [seatMap, setSeatMap] = useState(null);
+  const [loadingSeats, setLoadingSeats] = useState(false);
   const busTypeInfo = BUS_TYPE_LABEL[trip.busType?.code] || BUS_TYPE_LABEL.STANDARD;
   const availability = trip.availableSeats;
   const isLow = availability > 0 && availability <= 8;
   const isFull = availability === 0;
+
+  const handleExpand = async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && !seatMap) {
+      setLoadingSeats(true);
+      try {
+        const sm = await tripApi.getSeatMap(trip.id);
+        setSeatMap(sm);
+      } catch { /* ignore */ }
+      setLoadingSeats(false);
+    }
+  };
+
+  const renderSeatMap = () => {
+    if (loadingSeats) return <div style={{ textAlign:'center', padding:'1rem', color:'var(--gray-400)', fontSize:'0.85rem' }}>Đang tải sơ đồ ghế...</div>;
+    if (!seatMap?.seatRows) return null;
+    const isSleeper = trip.busType?.code === 'SLEEPER';
+    const bookedSet = new Set(trip.bookedSeats || []);
+
+    return (
+      <div style={{ marginTop:'0.75rem' }}>
+        <div style={{ display:'flex', gap:'1rem', fontSize:'0.75rem', color:'var(--gray-500)', marginBottom:'0.5rem' }}>
+          <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:3, background:'var(--success, #22c55e)', marginRight:4, verticalAlign:'middle' }} />Trống</span>
+          <span><span style={{ display:'inline-block', width:10, height:10, borderRadius:3, background:'var(--gray-300)', marginRight:4, verticalAlign:'middle' }} />Đã đặt</span>
+          <span style={{ marginLeft:'auto', fontWeight:600 }}>Còn {availability}/{seatMap.totalSeats} chỗ</span>
+        </div>
+        {/* Driver */}
+        <div style={{ display:'flex', justifyContent:'center', marginBottom:4 }}>
+          <div style={{ padding:'2px 16px', background:'var(--gray-100)', borderRadius:6, fontSize:'0.7rem', color:'var(--gray-400)' }}>🚌 Tài xế</div>
+        </div>
+        {isSleeper ? (
+          <div style={{ display:'flex', gap:'1.5rem' }}>
+            {[1,2].map(floor => (
+              <div key={floor} style={{ flex:1 }}>
+                <div style={{ fontSize:'0.7rem', color:'var(--gray-400)', marginBottom:4, textAlign:'center' }}>Tầng {floor}</div>
+                {(seatMap.seatRows || []).filter(row => row[0]?.floor === floor).map((row, ri) => (
+                  <div key={ri} style={{ display:'flex', gap:4, justifyContent:'center', marginBottom:4 }}>
+                    {row.map(seat => {
+                      const isBooked = bookedSet.has(seat.id) || seat.status === 'booked';
+                      return <div key={seat.id} style={{ width:32, height:28, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:600, background: isBooked ? 'var(--gray-200)' : 'var(--success, #22c55e)', color: isBooked ? 'var(--gray-400)' : 'white' }} title={seat.label}>{seat.id}</div>;
+                    })}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3 }}>
+            {(seatMap.seatRows || []).map((row, ri) => (
+              <div key={ri} style={{ display:'flex', gap:4, alignItems:'center' }}>
+                {row.slice(0,2).map(seat => {
+                  const isBooked = bookedSet.has(seat.id) || seat.status === 'booked';
+                  return <div key={seat.id} style={{ width:28, height:28, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.6rem', fontWeight:600, background: isBooked ? 'var(--gray-200)' : 'var(--success, #22c55e)', color: isBooked ? 'var(--gray-400)' : 'white' }} title={seat.label}>{seat.id}</div>;
+                })}
+                <div style={{ width:16 }} />
+                {row.slice(2).map(seat => {
+                  const isBooked = bookedSet.has(seat.id) || seat.status === 'booked';
+                  return <div key={seat.id} style={{ width:28, height:28, borderRadius:4, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.6rem', fontWeight:600, background: isBooked ? 'var(--gray-200)' : 'var(--success, #22c55e)', color: isBooked ? 'var(--gray-400)' : 'white' }} title={seat.label}>{seat.id}</div>;
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className={`trip-card ${isFull ? 'trip-card-full' : ''}`}>
@@ -65,7 +135,7 @@ const TripCard = ({ trip, onSelect }) => {
           </div>
           <button
             className="trip-expand-btn"
-            onClick={() => setExpanded(e => !e)}
+            onClick={handleExpand}
             aria-label="Xem chi tiết"
           >
             Chi tiết <FiChevronDown style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: '0.2s' }} />
@@ -112,10 +182,17 @@ const TripCard = ({ trip, onSelect }) => {
               </div>
             </div>
           )}
-          <div className="trip-amenities">
-            {['💨 Điều hòa', '🔌 Sạc điện', '💧 Nước uống', '🧻 Khăn lạnh'].map(a => (
-              <span key={a} className="amenity-tag">{a}</span>
-            ))}
+          {/* Seat map */}
+          {renderSeatMap()}
+          <div style={{ display:'flex', gap:8, marginTop:'0.75rem' }}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => !isFull && onSelect(trip)}
+              disabled={isFull}
+              style={{ flex:1 }}
+            >
+              {isFull ? 'Hết chỗ' : 'Đặt vé ngay'} {!isFull && <FiArrowRight size={13} />}
+            </button>
           </div>
         </div>
       )}
@@ -138,6 +215,8 @@ const TripSkeleton = () => (
   </div>
 );
 
+const ITEMS_PER_PAGE = 8;
+
 const SearchResultPage = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -152,6 +231,7 @@ const SearchResultPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState({ busType: 'all', sort: 'time', maxPrice: '' });
+  const [page, setPage] = useState(0);
 
   const doSearch = useCallback(async () => {
     if (!from || !to || !date) return;
@@ -185,6 +265,14 @@ const SearchResultPage = () => {
       if (filter.sort === 'price-desc') return b.price - a.price;
       return (a.departureTime || '').localeCompare(b.departureTime || '');
     });
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginatedTrips = filtered.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+
+  const handleFilterChange = (newFilter) => {
+    setFilter(newFilter);
+    setPage(0);
+  };
 
   const handleSelect = (trip) => {
     setTrip({ ...trip, passengers });
@@ -228,7 +316,7 @@ const SearchResultPage = () => {
 
                 <div className="filter-group">
                   <label className="filter-label">Sắp xếp theo</label>
-                  <select className="form-input form-select" value={filter.sort} onChange={e => setFilter(f => ({ ...f, sort: e.target.value }))}>
+                  <select className="form-input form-select" value={filter.sort} onChange={e => handleFilterChange({ ...filter, sort: e.target.value })}>
                     <option value="time">Giờ khởi hành</option>
                     <option value="price-asc">Giá thấp → cao</option>
                     <option value="price-desc">Giá cao → thấp</option>
@@ -242,7 +330,7 @@ const SearchResultPage = () => {
                       <button
                         key={val}
                         className={`filter-option ${filter.busType === val ? 'active' : ''}`}
-                        onClick={() => setFilter(f => ({ ...f, busType: val }))}
+                        onClick={() => handleFilterChange({ ...filter, busType: val })}
                       >
                         {label}
                       </button>
@@ -252,7 +340,7 @@ const SearchResultPage = () => {
 
                 <div className="filter-group">
                   <label className="filter-label">Giá tối đa</label>
-                  <select className="form-input form-select" value={filter.maxPrice} onChange={e => setFilter(f => ({ ...f, maxPrice: e.target.value }))}>
+                  <select className="form-input form-select" value={filter.maxPrice} onChange={e => handleFilterChange({ ...filter, maxPrice: e.target.value })}>
                     <option value="">Tất cả mức giá</option>
                     <option value="200000">Dưới 200.000₫</option>
                     <option value="350000">Dưới 350.000₫</option>
@@ -261,7 +349,7 @@ const SearchResultPage = () => {
                   </select>
                 </div>
 
-                <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => setFilter({ busType: 'all', sort: 'time', maxPrice: '' })}>
+                <button className="btn btn-ghost btn-sm" style={{ width: '100%', marginTop: 8 }} onClick={() => handleFilterChange({ busType: 'all', sort: 'time', maxPrice: '' })}>
                   Xóa bộ lọc
                 </button>
               </div>
@@ -296,7 +384,7 @@ const SearchResultPage = () => {
                   <div className="sr-empty-icon">🔍</div>
                   <h3>Không có kết quả với bộ lọc hiện tại</h3>
                   <p>Hãy thử thay đổi bộ lọc hoặc chọn ngày khác.</p>
-                  <button className="btn btn-primary" onClick={() => setFilter({ busType: 'all', sort: 'time', maxPrice: '' })}>
+                  <button className="btn btn-primary" onClick={() => handleFilterChange({ busType: 'all', sort: 'time', maxPrice: '' })}>
                     Xóa bộ lọc
                   </button>
                 </div>
@@ -311,9 +399,17 @@ const SearchResultPage = () => {
               )}
 
               {/* Results */}
-              {!loading && !error && filtered.map(trip => (
+              {!loading && !error && paginatedTrips.map(trip => (
                 <TripCard key={trip.id} trip={trip} onSelect={handleSelect} />
               ))}
+
+              {/* Pagination */}
+              {!loading && !error && filtered.length > 0 && (
+                <Pagination page={page} totalPages={totalPages} onPageChange={(p) => {
+                  setPage(p);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }} />
+              )}
             </div>
           </div>
         </div>

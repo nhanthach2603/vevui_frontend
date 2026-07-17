@@ -135,7 +135,7 @@ const NewsAdminPage = () => {
   return (
     <AdminLayout title="Tin tức">
       {/* Tabs */}
-      <div style={{ display:'flex', gap:8, marginBottom:'var(--sp-5)' }}>
+      <div className="page-tabs">
         <button className={`a-btn a-btn-sm ${tab === 'news' ? 'a-btn-primary' : 'a-btn-ghost'}`} onClick={() => { setTab('news'); setSearch(''); }} id="tab-news">
           <FiFileText size={14} /> Bài viết
         </button>
@@ -158,8 +158,8 @@ const NewsAdminPage = () => {
           </div>
 
           <div className="a-card" style={{ marginBottom:'var(--sp-5)' }}>
-            <div className="a-card-body" style={{ padding:'1rem 1.5rem' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:8, maxWidth:600 }}>
+            <div className="a-card-body card-filter-body">
+              <div className="filter-bar search-box" style={{ maxWidth:600 }}>
                 <FiSearch style={{ color:'var(--gray-400)', flexShrink:0 }} />
                 <input className="a-input" placeholder="Tìm bài viết..." value={search} onChange={e=>setSearch(e.target.value)} id="news-search" style={{ border:'none', boxShadow:'none', padding:'4px 0', flex:1 }} />
                 <select className="a-input a-select" value={filterCategory} onChange={e=>setFilterCategory(e.target.value)} id="news-category-filter" style={{ width:180, flexShrink:0 }}>
@@ -171,7 +171,7 @@ const NewsAdminPage = () => {
           </div>
 
           <div className="a-card">
-            <div style={{ overflowX:'auto' }}>
+            <div className="a-card-scroll">
               <table className="a-table">
                 <thead>
                   <tr><th>Tiêu đề</th><th>Danh mục</th><th>Tác giả</th><th>Ngày</th><th>Lượt xem</th><th>Trạng thái</th><th>Thao tác</th></tr>
@@ -192,7 +192,7 @@ const NewsAdminPage = () => {
                         <StatusBadge status={n.status === 'published' ? 'PUBLISHED' : 'DRAFT'} />
                       </td>
                       <td>
-                        <div style={{ display:'flex', gap:5 }}>
+                        <div className="action-row">
                           <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => openDetail(n)} title="Xem" id={`view-news-${n.id}`}><FiEye size={14}/></button>
                           <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => handleTogglePublish(n)} title={n.status === 'published' ? 'Gỡ xuống' : 'Xuất bản'} id={`toggle-publish-${n.id}`} style={{ color: n.status === 'published' ? 'var(--warning)' : 'var(--success)' }}>
                             {n.status === 'published' ? <FiX size={14}/> : <FiCheck size={14}/>}
@@ -235,7 +235,7 @@ const NewsAdminPage = () => {
                     <h3 style={{ margin:0, fontSize:'1.1rem', fontWeight:800, color:'var(--gray-900)' }}>{cat}</h3>
                     <div style={{ fontSize:'0.82rem', color:'var(--gray-400)', marginTop:4 }}>{count} bài viết</div>
                   </div>
-                  <div style={{ display:'flex', gap:4 }}>
+                  <div className="action-row" style={{ gap:4 }}>
                     <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => openEditCat(idx)} title="Sửa" id={`edit-cat-${idx}`}><FiEdit2 size={14}/></button>
                     <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => setDeleteCatIdx(idx)} style={{ color:'var(--danger)' }} title="Xóa" id={`delete-cat-${idx}`}><FiTrash2 size={14}/></button>
                   </div>

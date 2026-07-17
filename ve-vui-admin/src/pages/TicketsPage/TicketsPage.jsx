@@ -133,18 +133,20 @@ const TicketsPage = () => {
       </div>
 
       <div className="a-card" style={{ marginBottom:'var(--sp-5)' }}>
-        <div className="a-card-body" style={{ padding:'1rem 1.5rem', display:'flex', gap:'var(--sp-4)', flexWrap:'wrap', alignItems:'center' }}>
-          <SearchInput value={search} onChange={handleSearch} placeholder="Tim ma ve, ten, SDT..." id="ticket-search" />
-          <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+        <div className="a-card-body card-filter-body">
+          <div className="filter-bar" style={{ gap:'var(--sp-4)', flexWrap:'wrap', alignItems:'center' }}>
+            <SearchInput value={search} onChange={handleSearch} placeholder="Tim ma ve, ten, SDT..." id="ticket-search" />
+            <div className="filter-bar filter-group" style={{ flexWrap:'wrap' }}>
             {[['all','Tat ca'],['PENDING','Cho xac nhan'],['CONFIRMED','Da xac nhan'],['CANCELLED','Da huy'],['USED','Da su dung']].map(([v,l]) => (
               <button key={v} className={`a-btn a-btn-sm ${statusFilter===v?'a-btn-primary':'a-btn-ghost'}`} onClick={() => setStatus(v)} id={`filter-${v}`}>{l}</button>
             ))}
+          </div>
           </div>
         </div>
       </div>
 
       <div className="a-card">
-        <div style={{ overflowX:'auto' }}>
+        <div className="a-card-scroll">
           <table className="a-table">
             <thead>
               <tr><th>Ma ve</th><th>Hanh khach</th><th>Tuyen</th><th>Ghe</th><th>Tong tien</th><th>Thanh toan</th><th>Trang thai</th><th>Thao tac</th></tr>
@@ -177,7 +179,7 @@ const TicketsPage = () => {
                   <td><span className="a-badge a-badge-blue">{PAYMENT_LABELS[t.paymentMethod] || t.paymentMethod}</span></td>
                   <td><StatusBadge status={t.status} /></td>
                   <td>
-                    <div style={{ display:'flex', gap:5, alignItems:'center', position:'relative' }}>
+                    <div className="action-row" style={{ alignItems:'center', position:'relative' }}>
                       <button className="a-btn a-btn-ghost a-btn-sm a-btn-icon" onClick={() => handleView(t)} title="Xem chi tiet" id={`view-ticket-${t.id}`}><FiEye size={14}/></button>
                       <div style={{ position:'relative' }}>
                         <button

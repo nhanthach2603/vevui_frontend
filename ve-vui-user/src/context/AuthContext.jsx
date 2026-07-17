@@ -53,6 +53,15 @@ export const AuthProvider = ({ children }) => {
     clearTokens();
   }, []);
 
+  // ── Cập nhật thông tin user trong context + localStorage ──
+  const updateUser = useCallback((newData) => {
+    setUser(prev => {
+      const updated = { ...prev, ...newData };
+      localStorage.setItem('vevui_user', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
   // ── Lấy auth header (dùng cho các component cần truyền token) ──
   const getAuthToken = useCallback(() => getToken(), []);
 
@@ -62,6 +71,7 @@ export const AuthProvider = ({ children }) => {
       login,
       register,
       logout,
+      updateUser,
       getAuthToken,
       isLoggedIn: !!user,
     }}>

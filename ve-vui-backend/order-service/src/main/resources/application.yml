@@ -1,52 +1,66 @@
+# ╔══════════════════════════════════════════════════════════╗
+#  Order Service — Cấu hình Spring Boot
+#  Port: 8813 | Database: db_orders | Kafka: booking-confirmed
+# ╚══════════════════════════════════════════════════════════╝
+
 server:
-  port: 8813
+  port: 8813  # Port mà Order Service lắng nghe HTTP request
 
 spring:
   application:
-    name: order-service
+    name: order-service  # Tên đăng ký lên Eureka (dùng cho Feign Client)
+
   datasource:
+    # Kết nối MySQL db_orders
+    # ${DB_HOST:localhost}: đọc từ env DB_HOST, mặc định localhost
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/db_orders?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true
-    username: ${DB_USER:root}
-    password: ${DB_PASS:vevui123}
+    username: ${DB_USER:root}      # Username MySQL (mặc định: root)
+    password: ${DB_PASS:vevui123}  # Password MySQL (mặc định: vevui123)
     driver-class-name: com.mysql.cj.jdbc.Driver
+
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: false
+      ddl-auto: update  # Tự động update schema khi启动 (không drop)
+    show-sql: false      # Không log SQL ra console
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQLDialect
+
   kafka:
+    # Kafka Broker address
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
+# Eureka Client — Đăng ký service lên Eureka Server
 eureka:
   client:
     service-url:
       defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka/
   instance:
-    prefer-ip-address: true
+    prefer-ip-address: true  # Ưu tiên IP thay vì hostname
     instance-id: ${spring.application.name}:${server.port}
 
-# Feign client config
+# Feign Client — Cấu hình gọi service khác
 feign:
   client:
     config:
       default:
-        connectTimeout: 5000
-        readTimeout: 5000
+        connectTimeout: 5000  # Timeout kết nối: 5 giây
+        readTimeout: 5000     # Timeout đọc response: 5 giây
   circuitbreaker:
-    enabled: true
+    enabled: true  # Bật Circuit Breaker (Resilience4j) — gọi Fallback khi lỗi
 
+# Management — Endpoints giám sát
 management:
   endpoints:
     web:
       exposure:
-        include: health, info
+        include: health, info  # Chỉ expose health + info (không expose all)
 
+# Logging
 logging:
   level:
-    com.vevui.orderservice: DEBUG
-    org.springframework.kafka: WARN
+    com.vevui.orderservice: DEBUG  # Log DEBUG cho order-service
+    org.springframework.kafka: WARN  # Giảm log Kafka (chỉ WARN trở lên)

@@ -1,29 +1,147 @@
 // components/ui/SearchBox.jsx
-import { useState } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowRight, FiCalendar, FiUsers, FiMapPin, FiSearch, FiRefreshCw } from 'react-icons/fi';
+import { FiArrowRight, FiCalendar, FiUsers, FiMapPin, FiSearch, FiRefreshCw, FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import { useBooking } from '../../context/BookingContext';
-import { PROVINCES } from '../../constants/routes';
+import { cityApi, tripApi } from '../../services/api';
 import './SearchBox.css';
 
-const today = new Date().toISOString().split('T')[0];
+const today = new Date();
+const todayStr = today.toISOString().split('T')[0];
+
+const WEEKDAYS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
+
+const MiniCalendar = ({ availableDates, selected, onSelect }) => {
+  const [viewMonth, setViewMonth] = useState(today.getMonth());
+  const [viewYear, setViewYear] = useState(today.getFullYear());
+
+  const availableSet = useMemo(() => new Set(availableDates || []), [availableDates]);
+
+  const yearMonth = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}`;
+  const monthLabel = `Tháng ${viewMonth + 1} / ${viewYear}`;
+  const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+  const firstDayOfWeek = new Date(viewYear, viewMonth, 1).getDay();
+
+  const prevMonth = () => {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1); }
+    else setViewMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1); }
+    else setViewMonth(m => m + 1);
+  };
+
+  const cells = [];
+  for (let i = 0; i < firstDayOfWeek; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  return (
+    <div style={{ background:'#fff', border:'1px solid var(--gray-200)', borderRadius:8, padding:'8px', width:'100%', maxWidth:320 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6, padding:'0 4px' }}>
+        <button type="button" onClick={prevMonth} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--primary)', padding:4, borderRadius:4, display:'flex' }}><FiChevronLeft size={16}/></button>
+        <span style={{ fontWeight:700, fontSize:'0.85rem' }}>{monthLabel}</span>
+        <button type="button" onClick={nextMonth} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--primary)', padding:4, borderRadius:4, display:'flex' }}><FiChevronRight size={16}/></button>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:2, textAlign:'center' }}>
+        {WEEKDAYS.map(w => (
+          <div key={w} style={{ fontSize:'0.65rem', fontWeight:700, color:'var(--gray-400)', padding:'2px 0' }}>{w}</div>
+        ))}
+        {cells.map((d, i) => {
+          if (d === null) return <div key={`empty-${i}`}/>;
+          const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const isPast = dateStr < todayStr;
+          const hasTrip = availableSet.has(dateStr);
+          const isSelected = dateStr === selected;
+          const isDisabled = isPast || !hasTrip;
+          return (
+            <button
+              key={dateStr}
+              type="button"
+              disabled={isDisabled}
+              onClick={() => !isDisabled && onSelect(dateStr)}
+              style={{
+                width:32, height:32, borderRadius:6, border: isSelected ? '2px solid var(--primary)' : '1px solid transparent',
+                background: isSelected ? 'var(--primary)' : isDisabled ? 'transparent' : hasTrip ? '#ECFDF5' : 'transparent',
+                color: isSelected ? '#fff' : isDisabled ? 'var(--gray-300)' : hasTrip ? '#059669' : 'var(--gray-400)',
+                fontWeight: isSelected ? 800 : hasTrip ? 700 : 400,
+                fontSize:'0.8rem', cursor: isDisabled ? 'not-allowed' : 'pointer',
+                transition:'all 0.15s',
+              }}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
+      {availableDates.length > 0 && (
+        <div style={{ fontSize:'0.7rem', color:'var(--gray-400)', textAlign:'center', marginTop:4 }}>
+          Green = có chuyến
+        </div>
+      )}
+    </div>
+  );
+};
 
 const SearchBox = ({ compact = false }) => {
   const navigate    = useNavigate();
   const { setSearch } = useBooking();
+  const [cities, setCities] = useState([]);
+  const [availableDates, setAvailableDates] = useState([]);
+  const [loadingDates, setLoadingDates] = useState(false);
+  const [showCal, setShowCal] = useState(false);
 
   const [form, setForm] = useState({
-    from: 'TP. Hồ Chí Minh',
-    to: 'Đà Lạt',
-    date: today,
+    from: '',
+    to: '',
+    date: todayStr,
     passengers: 1,
   });
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    cityApi.getAll().then(data => {
+      if (Array.isArray(data) && data.length > 0) {
+        setCities(data);
+        setForm(f => ({
+          ...f,
+          from: f.from || data[0]?.name || '',
+          to: f.to || (data.length > 1 ? data[1]?.name : data[0]?.name) || '',
+        }));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const loadAvailableDates = useCallback(async (from, to) => {
+    if (!from || !to || from === to) { setAvailableDates([]); return; }
+    setLoadingDates(true);
+    try {
+      const data = await tripApi.getAvailableDates(from, to);
+      setAvailableDates(Array.isArray(data) ? data.map(d => d.date) : []);
+    } catch { setAvailableDates([]); }
+    setLoadingDates(false);
+  }, []);
+
+  useEffect(() => {
+    if (form.from && form.to && form.from !== form.to) {
+      loadAvailableDates(form.from, form.to);
+    }
+  }, [form.from, form.to, loadAvailableDates]);
 
   const swap = () => setForm(f => ({ ...f, from: f.to, to: f.from }));
 
   const handle = (field) => (e) =>
     setForm(f => ({ ...f, [field]: e.target.value }));
+
+  const selectDate = (dateStr) => {
+    setForm(f => ({ ...f, date: dateStr }));
+    setShowCal(false);
+  };
+
+  const formatDateDisplay = (dateStr) => {
+    if (!dateStr) return 'Chọn ngày';
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString('vi-VN', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+  };
 
   const submit = (e) => {
     e.preventDefault();
@@ -54,7 +172,7 @@ const SearchBox = ({ compact = false }) => {
             id="search-from"
           >
             <option value="">-- Chọn điểm đi --</option>
-            {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+            {cities.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
         </div>
 
@@ -80,25 +198,33 @@ const SearchBox = ({ compact = false }) => {
             id="search-to"
           >
             <option value="">-- Chọn điểm đến --</option>
-            {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+            {cities.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
           </select>
         </div>
 
         <div className="search-divider" />
 
         {/* Date */}
-        <div className="search-field">
+        <div className="search-field" style={{ position:'relative' }}>
           <label className="search-field-label">
             <FiCalendar className="sf-icon" /> Ngày đi
+            {loadingDates && <span style={{ fontSize: '0.7rem', color: 'var(--gray-400)', marginLeft: 4 }}>đang tải...</span>}
           </label>
-          <input
-            type="date"
+          <button
+            type="button"
             className="search-field-input"
-            value={form.date}
-            min={today}
-            onChange={handle('date')}
+            onClick={() => setShowCal(c => !c)}
+            style={{ textAlign:'left', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'space-between', background: showCal ? '#fff' : undefined, borderColor: showCal ? 'var(--primary)' : undefined }}
             id="search-date"
-          />
+          >
+            <span>{form.date ? formatDateDisplay(form.date) : 'Chọn ngày'}</span>
+            <FiCalendar size={14} style={{ color:'var(--gray-400)' }} />
+          </button>
+          {showCal && (
+            <div style={{ position:'absolute', top:'100%', left:0, zIndex:100, marginTop:4, boxShadow:'0 8px 24px rgba(0,0,0,0.15)', borderRadius:8 }}>
+              <MiniCalendar availableDates={availableDates} selected={form.date} onSelect={selectDate} />
+            </div>
+          )}
         </div>
 
         <div className="search-divider" />

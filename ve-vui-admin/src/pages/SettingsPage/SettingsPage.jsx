@@ -81,21 +81,14 @@ const SettingsPage = () => {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 'var(--sp-5)' }}>
+      <div className="settings-layout">
         {/* Tabs sidebar */}
-        <div className="a-card" style={{ padding: 'var(--sp-3)', height: 'fit-content' }}>
+        <div className="a-card settings-tabs">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                padding: '10px 12px', border: 'none', borderRadius: 8, cursor: 'pointer',
-                background: activeTab === tab.id ? 'var(--primary-bg)' : 'transparent',
-                color: activeTab === tab.id ? 'var(--primary)' : 'var(--gray-600)',
-                fontWeight: activeTab === tab.id ? 700 : 500, fontSize: '0.875rem',
-                transition: 'all 0.15s',
-              }}
+              className={`settings-tab-btn ${activeTab === tab.id ? 'active' : ''}`}
             >
               {tab.icon} {tab.label}
             </button>
@@ -103,7 +96,7 @@ const SettingsPage = () => {
         </div>
 
         {/* Content */}
-        <div className="a-card" style={{ padding: 'var(--sp-5)' }}>
+        <div className="a-card settings-content">
           {saved && (
             <div style={{
               padding: '10px 16px', borderRadius: 8, marginBottom: 'var(--sp-4)',

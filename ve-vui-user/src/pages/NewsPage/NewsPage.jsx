@@ -4,10 +4,17 @@ import { Link, useParams } from 'react-router-dom';
 import { FiArrowRight, FiCalendar, FiEye, FiArrowLeft, FiRefreshCw } from 'react-icons/fi';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
+import Pagination from '../../components/ui/Pagination';
 import { newsApi } from '../../services/api';
 import './NewsPage.css';
 
-const CATEGORIES = ['Tất cả', 'Khuyến mãi', 'Tin tức', 'Hướng dẫn', 'Du lịch', 'Thông báo'];
+const CATEGORY_LABELS = {
+  'Du lich': 'Du lịch',
+  'Huong dan': 'Hướng dẫn',
+  'Khuyen mai': 'Khuyến mãi',
+  'Thong bao': 'Thông báo',
+  'Tin tuc': 'Tin tức',
+};
 
 // ── Skeleton card ──
 const NewsSkeleton = () => (
@@ -23,27 +30,52 @@ const NewsSkeleton = () => (
 
 export const NewsListPage = () => {
   const [newsList, setNewsList] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [cat, setCat] = useState('Tất cả');
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
 
   useEffect(() => {
     document.title = 'Tin tức | Vé Vui';
-    loadNews();
+    loadNews(0);
+    loadCategories();
   }, []);
 
-  const loadNews = async () => {
+  const loadCategories = async () => {
+    try {
+      const cats = await newsApi.getCategories();
+      setCategories(cats || []);
+    } catch (err) {
+      console.error('Categories fetch error:', err);
+    }
+  };
+
+  const loadNews = async (pageNum = 0) => {
     setLoading(true);
     setError('');
     try {
-      const data = await newsApi.getAll();
-      setNewsList(data || []);
+      const { items, totalPages: tp } = await newsApi.getAll(pageNum, 9);
+      setNewsList(items || []);
+      setTotalPages(tp || 1);
     } catch (err) {
       console.error('News fetch error:', err);
       setError('Không thể tải tin tức. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCategoryChange = (c) => {
+    setCat(c);
+    setPage(0);
+  };
+
+  const handlePageChange = (p) => {
+    setPage(p);
+    loadNews(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const filtered = cat === 'Tất cả'
@@ -63,8 +95,8 @@ export const NewsListPage = () => {
 
         <div className="container news-content">
           <div className="news-cats">
-            {CATEGORIES.map(c => (
-              <button key={c} className={`news-cat-btn ${cat === c ? 'active' : ''}`} onClick={() => setCat(c)}>{c}</button>
+            {['Tất cả', ...categories].map(c => (
+              <button key={c} className={`news-cat-btn ${cat === c ? 'active' : ''}`} onClick={() => handleCategoryChange(c)}>{CATEGORY_LABELS[c] || c}</button>
             ))}
           </div>
 
@@ -72,7 +104,7 @@ export const NewsListPage = () => {
           {error && (
             <div style={{ textAlign: 'center', padding: '3rem 0' }}>
               <p style={{ color: 'var(--gray-400)', marginBottom: '1rem' }}>{error}</p>
-              <button className="btn btn-primary" onClick={loadNews}>
+              <button className="btn btn-primary" onClick={() => loadNews(page)}>
                 <FiRefreshCw size={14} /> Thử lại
               </button>
             </div>
@@ -96,7 +128,7 @@ export const NewsListPage = () => {
                   }
                 </div>
                 <div className="nfc-body">
-                  <span className="nfc-cat">{filtered[0].category}</span>
+                  <span className="nfc-cat">{CATEGORY_LABELS[filtered[0].category] || filtered[0].category}</span>
                   <h2 className="nfc-title">{filtered[0].title}</h2>
                   <p className="nfc-excerpt">{filtered[0].excerpt || filtered[0].summary}</p>
                   <div className="nfc-meta">
@@ -111,35 +143,38 @@ export const NewsListPage = () => {
 
           {/* News grid */}
           {!loading && !error && (
-            <div className="news-grid-list">
-              {filtered.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-400)', gridColumn: '1 / -1' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
-                  <p>Chưa có tin tức nào trong danh mục này.</p>
-                </div>
-              ) : (
-                filtered.map(item => (
-                  <Link key={item.id} to={`/tin-tuc/${item.slug || item.id}`} className="news-list-card">
-                    <div className="nlc-img">
-                      {item.imageUrl || item.image
-                        ? <img src={item.imageUrl || item.image} alt={item.title} />
-                        : <div style={{ background: 'var(--gradient-primary)', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>📰</div>
-                      }
-                    </div>
-                    <div className="nlc-body">
-                      <span className="nlc-cat">{item.category}</span>
-                      <h3 className="nlc-title">{item.title}</h3>
-                      <p className="nlc-excerpt">{item.excerpt || item.summary}</p>
-                      <div className="nlc-meta">
-                        <span><FiCalendar size={12} /> {new Date(item.publishedAt || item.createdAt).toLocaleDateString('vi-VN')}</span>
-                        {item.views != null && <span><FiEye size={12} /> {Number(item.views).toLocaleString()}</span>}
-                        <span className="nlc-read">Đọc thêm <FiArrowRight size={12} /></span>
+            <>
+              <div className="news-grid-list">
+                {filtered.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-400)', gridColumn: '1 / -1' }}>
+                    <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                    <p>Chưa có tin tức nào trong danh mục này.</p>
+                  </div>
+                ) : (
+                  filtered.map(item => (
+                    <Link key={item.id} to={`/tin-tuc/${item.slug || item.id}`} className="news-list-card">
+                      <div className="nlc-img">
+                        {item.imageUrl || item.image
+                          ? <img src={item.imageUrl || item.image} alt={item.title} />
+                          : <div style={{ background: 'var(--gradient-primary)', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2.5rem' }}>📰</div>
+                        }
                       </div>
-                    </div>
-                  </Link>
-                ))
-              )}
-            </div>
+                      <div className="nlc-body">
+                        <span className="nlc-cat">{CATEGORY_LABELS[item.category] || item.category}</span>
+                        <h3 className="nlc-title">{item.title}</h3>
+                        <p className="nlc-excerpt">{item.excerpt || item.summary}</p>
+                        <div className="nlc-meta">
+                          <span><FiCalendar size={12} /> {new Date(item.publishedAt || item.createdAt).toLocaleDateString('vi-VN')}</span>
+                          {item.views != null && <span><FiEye size={12} /> {Number(item.views).toLocaleString()}</span>}
+                          <span className="nlc-read">Đọc thêm <FiArrowRight size={12} /></span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))
+                )}
+              </div>
+              <Pagination page={page} totalPages={totalPages} onPageChange={handlePageChange} />
+            </>
           )}
         </div>
       </main>
@@ -166,7 +201,7 @@ export const NewsDetailPage = () => {
           data = await newsApi.getById(slug);
         } else {
           // Lấy tất cả rồi tìm theo slug
-          const all = await newsApi.getAll();
+          const { items: all } = await newsApi.getAll(0, 100);
           data = all.find(n => n.slug === slug);
           // Lưu related
           setRelated((all || []).filter(n => n.id !== data?.id).slice(0, 4));
@@ -212,7 +247,7 @@ export const NewsDetailPage = () => {
             <article className="news-detail-article">
               <Link to="/tin-tuc" className="news-back"><FiArrowLeft /> Tin tức</Link>
               <div className="nd-meta">
-                <span className="nd-cat">{item.category}</span>
+                <span className="nd-cat">{CATEGORY_LABELS[item.category] || item.category}</span>
                 <span><FiCalendar size={13} /> {new Date(item.publishedAt || item.createdAt).toLocaleDateString('vi-VN')}</span>
                 {item.views != null && <span><FiEye size={13} /> {Number(item.views).toLocaleString()} lượt xem</span>}
               </div>

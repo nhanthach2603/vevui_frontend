@@ -175,7 +175,7 @@ const BusesPage = () => {
   return (
     <AdminLayout title="Quản lý xe">
       {/* Tabs */}
-      <div style={{ display:'flex', gap:8, marginBottom:'var(--sp-5)' }}>
+      <div className="page-tabs">
         <button className={`a-btn a-btn-sm ${tab === 'buses' ? 'a-btn-primary' : 'a-btn-ghost'}`} onClick={() => { setTab('buses'); setSearch(''); }} id="tab-buses">
           <FiTruck size={14} /> Quản lý xe
         </button>
@@ -209,7 +209,7 @@ const BusesPage = () => {
           )}
 
           {/* Bus type stats */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px,1fr))', gap:'var(--sp-4)', marginBottom:'var(--sp-5)' }}>
+          <div className="grid-auto-sm">
             {busTypes.map(bt => {
               const count = buses.filter(b => b.busTypeId === bt.id).length;
               return (
@@ -228,13 +228,13 @@ const BusesPage = () => {
 
           {/* Search */}
           <div className="a-card" style={{ marginBottom:'var(--sp-5)' }}>
-            <div className="a-card-body" style={{ padding:'1rem 1.5rem' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, flex:1, minWidth:200, maxWidth:360 }}>
+            <div className="a-card-body card-filter-body">
+              <div className="filter-bar" style={{ gap:12 }}>
+                <div className="filter-bar search-box" style={{ flex:1, minWidth:200, maxWidth:360 }}>
                   <FiSearch style={{ color:'var(--gray-400)', flexShrink:0 }} />
                   <input className="a-input" placeholder="Tìm xe..." value={search} onChange={e=>setSearch(e.target.value)} id="bus-search" style={{ border:'none', boxShadow:'none', padding:'4px 0', fontSize:'0.9rem', flex:1 }} />
                 </div>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <div className="filter-bar filter-group">
                   <label style={{ fontSize:'0.85rem', color:'var(--gray-500)', fontWeight:600, whiteSpace:'nowrap' }}>Loại xe:</label>
                   <select className="a-input a-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)} id="bus-type-filter" style={{ minWidth:160, fontSize:'0.85rem' }}>
                     <option value="all">Tất cả</option>
@@ -247,7 +247,7 @@ const BusesPage = () => {
 
           {/* Table */}
           <div className="a-card">
-            <div style={{ overflowX:'auto' }}>
+            <div className="a-card-scroll">
               <table className="a-table">
                 <thead>
                   <tr><th>Biển số</th><th>Loại xe</th><th>Số chỗ</th><th>Mô tả</th><th>Trạng thái</th><th>Thao tác</th></tr>

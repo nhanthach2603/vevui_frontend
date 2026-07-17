@@ -88,7 +88,7 @@ const Dashboard = () => {
             <div className="a-card-title">Tổng quan doanh thu</div>
           </div>
           <div className="a-card-body" style={{ padding: '1.5rem' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'var(--sp-4)' }}>
+            <div className="grid-2">
               <div style={{ padding:'var(--sp-4)', background:'var(--primary-bg)', borderRadius:'var(--r-md)', textAlign:'center' }}>
                 <div style={{ fontSize:'0.8rem', fontWeight:600, color:'var(--gray-500)', marginBottom:4 }}>Hôm nay</div>
                 <div style={{ fontSize:'1.5rem', fontWeight:900, color:'var(--primary)' }}>{formatPrice(stats?.todayRevenue)}</div>

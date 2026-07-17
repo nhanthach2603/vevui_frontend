@@ -1,5 +1,5 @@
 // pages/HomePage/HomePage.jsx
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   FiShield, FiStar, FiClock, FiAward, FiArrowRight,
@@ -8,7 +8,7 @@ import {
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import SearchBox from '../../components/ui/SearchBox';
-import { routes, news, formatPrice } from '../../services/mockData';
+import { routeApi, newsApi, formatPrice } from '../../services/api';
 import './HomePage.css';
 
 // ── Hero Section ──
@@ -55,7 +55,7 @@ const HeroSection = () => (
 );
 
 // ── Popular Routes ──
-const PopularRoutes = () => {
+const PopularRoutes = ({ routes }) => {
   const popular = routes.filter(r => r.popular).slice(0, 4);
   return (
     <section className="section popular-routes" id="popular-routes">
@@ -74,7 +74,7 @@ const PopularRoutes = () => {
               style={{ animationDelay: `${i * 0.1}s` }}
             >
               <div className="route-card-img">
-                <img src={route.image} alt={`${route.from} - ${route.to}`} loading="lazy" />
+                <img src={route.imageUrl || route.image || 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=600'} alt={`${route.from} - ${route.to}`} loading="lazy" />
                 <div className="route-card-overlay" />
                 <div className="route-card-badge">Từ {formatPrice(route.basePrice)}</div>
               </div>
@@ -164,7 +164,7 @@ const StatsBanner = () => (
 );
 
 // ── News Section ──
-const NewsSection = () => {
+const NewsSection = ({ news }) => {
   const featured = news.slice(0, 3);
   return (
     <section className="section news-section" id="news">
@@ -178,7 +178,7 @@ const NewsSection = () => {
           {featured.map((item, i) => (
             <Link key={item.id} to={`/tin-tuc/${item.slug}`} className="news-card">
               <div className="news-card-img">
-                <img src={item.image} alt={item.title} loading="lazy" />
+                <img src={item.imageUrl || item.image || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800'} alt={item.title} loading="lazy" />
                 <span className="news-card-cat">{item.category}</span>
               </div>
               <div className="news-card-body">
@@ -240,8 +240,13 @@ const AppBanner = () => (
 
 // ── Main HomePage ──
 const HomePage = () => {
+  const [routes, setRoutes] = useState([]);
+  const [news, setNews] = useState([]);
+
   useEffect(() => {
     document.title = 'Vé Vui — Đặt vé xe dễ dàng, nhanh chóng';
+    routeApi.getAll(true).then(setRoutes).catch(() => {});
+    newsApi.getAll(0, 6).then(({ items }) => setNews(items)).catch(() => {});
   }, []);
 
   return (
@@ -249,10 +254,10 @@ const HomePage = () => {
       <Header transparent={true} />
       <main>
         <HeroSection />
-        <PopularRoutes />
+        <PopularRoutes routes={routes} />
         <WhyUs />
         <StatsBanner />
-        <NewsSection />
+        <NewsSection news={news} />
         <AppBanner />
       </main>
       <Footer />

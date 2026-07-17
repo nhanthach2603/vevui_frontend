@@ -4,7 +4,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import {
   FiGrid, FiMap, FiTruck, FiCalendar, FiCreditCard,
   FiUsers, FiFileText, FiBarChart2, FiSettings,
-  FiBell, FiSearch, FiMenu, FiX, FiLogOut, FiChevronDown
+  FiBell, FiSearch, FiMenu, FiX, FiLogOut, FiChevronDown, FiMapPin
 } from 'react-icons/fi';
 
 const NAV_ITEMS = [
@@ -20,8 +20,8 @@ const NAV_ITEMS = [
       { to: '/routes',   label: 'Tuyến đường', icon: <FiMap />,       badge: null },
       { to: '/buses',    label: 'Quản lý xe',  icon: <FiTruck />,     badge: null },
       { to: '/trips',    label: 'Chuyến đi',   icon: <FiCalendar />,  badge: null },
-      { to: '/tickets',  label: 'Vé đặt',      icon: <FiCreditCard />,badge: '5' },
-      { to: '/customers',label: 'Khách hàng',  icon: <FiUsers />,     badge: null },
+      { to: '/tickets',  label: 'Vé đặt',      icon: <FiCreditCard />,badge: null },
+      { to: '/customers',label: 'Người dùng',  icon: <FiUsers />,     badge: null },
     ],
   },
   {

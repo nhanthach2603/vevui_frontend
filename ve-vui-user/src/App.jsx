@@ -1,5 +1,5 @@
 // App.jsx — Main router configuration
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { BookingProvider } from './context/BookingContext';
@@ -12,6 +12,8 @@ import PaymentPage from './pages/PaymentPage/PaymentPage';
 import TicketLookupPage from './pages/TicketLookupPage/TicketLookupPage';
 import { NewsListPage, NewsDetailPage } from './pages/NewsPage/NewsPage';
 import AuthPage from './pages/AuthPage/AuthPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage/ForgotPasswordPage';
+import AccountPage from './pages/AccountPage/AccountPage';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import { routeApi, formatPrice, formatDuration } from './services/api';
@@ -20,6 +22,7 @@ import { routeApi, formatPrice, formatDuration } from './services/api';
 const SchedulePage = () => {
   const [routes, setRoutes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     document.title = 'Lịch trình | Vé Vui';
@@ -29,13 +32,19 @@ const SchedulePage = () => {
       .finally(() => setLoading(false));
   }, []);
 
+  const today = new Date().toISOString().split('T')[0];
+
+  const handleSelectRoute = (route) => {
+    navigate(`/tim-chuyen?from=${encodeURIComponent(route.from)}&to=${encodeURIComponent(route.to)}&date=${today}&passengers=1`);
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Header />
       <main style={{ flex: 1, paddingTop: 72, background: 'var(--gray-50)' }}>
         <section style={{ background: 'var(--gradient-primary)', padding: '5rem 0 3rem', textAlign: 'center', color: 'white' }}>
           <h1 style={{ color: 'white', fontSize: '2.5rem', marginBottom: '0.75rem' }}>Lịch trình xe</h1>
-          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.05rem' }}>Danh sách tất cả các tuyến đường và lịch chạy</p>
+          <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.05rem' }}>Chọn tuyến đường để xem chuyến xe và đặt vé</p>
         </section>
         <div className="container" style={{ padding: '3rem 1.5rem' }}>
           {loading ? (
@@ -45,16 +54,24 @@ const SchedulePage = () => {
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
               {routes.map(r => (
-                <div key={r.id} className="card" style={{ padding: '1.5rem', cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div key={r.id}
+                  className="card"
+                  onClick={() => handleSelectRoute(r)}
+                  style={{ padding: '1.25rem', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor = 'transparent'}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <span style={{ fontWeight: 800, fontSize: '1rem' }}>{r.from}</span>
                     <span style={{ color: 'var(--gray-300)', fontSize: '1.2rem' }}>→</span>
                     <span style={{ fontWeight: 800, fontSize: '1rem' }}>{r.to}</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.85rem', color: 'var(--gray-500)', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.8rem', color: 'var(--gray-500)' }}>
                     <span>⏱ {formatDuration(r.duration)}</span>
                     <span>📍 {r.distance}km</span>
-                    <span style={{ color: 'var(--primary)', fontWeight: 700 }}>Từ {formatPrice(r.basePrice)}</span>
+                    <span style={{ color: 'var(--primary)', fontWeight: 600 }}>Từ {formatPrice(r.basePrice)}</span>
+                  </div>
+                  <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--primary)', fontWeight: 600 }}>
+                    Xem chuyến xe →
                   </div>
                 </div>
               ))}
@@ -140,6 +157,11 @@ function App() {
             <Route path="/ve-chung-toi"     element={<AboutPage />} />
             <Route path="/dang-nhap"        element={<AuthPage />} />
             <Route path="/dang-ky"          element={<AuthPage />} />
+            <Route path="/quen-mat-khau"    element={<ForgotPasswordPage />} />
+            <Route path="/tai-khoan"               element={<AccountPage />} />
+            <Route path="/tai-khoan/ve-cua-toi"    element={<AccountPage />} />
+            <Route path="/tai-khoan/thong-tin"     element={<AccountPage />} />
+            <Route path="/tai-khoan/doi-mat-khau"  element={<AccountPage />} />
             <Route path="*"                 element={<NotFoundPage />} />
           </Routes>
         </BookingProvider>

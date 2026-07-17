@@ -1,0 +1,43 @@
+.uv-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+}
+
+.uv-pg-btn {
+  min-width: 36px;
+  height: 36px;
+  border: 1px solid var(--gray-200, #e2e8f0);
+  border-radius: 8px;
+  background: white;
+  color: var(--gray-600, #475569);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 8px;
+}
+
+.uv-pg-btn:hover:not(:disabled) {
+  border-color: var(--primary, #0ea5e9);
+  color: var(--primary, #0ea5e9);
+  background: var(--primary-50, #f0f9ff);
+}
+
+.uv-pg-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.uv-pg-active {
+  background: var(--primary, #0ea5e9) !important;
+  color: white !important;
+  border-color: var(--primary, #0ea5e9) !important;
+  font-weight: 600;
+}

@@ -5,6 +5,7 @@ import { FiArrowRight, FiArrowLeft, FiUser, FiPhone, FiMail, FiMapPin } from 're
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useBooking } from '../../context/BookingContext';
+import { useAuth } from '../../context/AuthContext';
 import { tripApi, formatPrice } from '../../services/api';
 import './BookingPage.css';
 
@@ -16,11 +17,12 @@ const BookingPage = () => {
     passengerInfo, pickupPoint, dropoffPoint,
     setPassenger, setPickup, setDropoff,
   } = useBooking();
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
-    name:  passengerInfo.name  || '',
-    phone: passengerInfo.phone || '',
-    email: passengerInfo.email || '',
+    name:  passengerInfo.name  || user?.name  || '',
+    phone: passengerInfo.phone || user?.phone || '',
+    email: passengerInfo.email || user?.email || '',
   });
   const [errors, setErrors] = useState({});
 

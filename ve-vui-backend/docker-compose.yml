@@ -32,6 +32,7 @@ services:
     image: mysql:8.0
     container_name: vevui-mysql
     restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --init-connect="SET NAMES utf8mb4" --default-authentication-plugin=mysql_native_password
     environment:
       MYSQL_ROOT_PASSWORD: vevui123
       MYSQL_USER: vevui
@@ -41,6 +42,7 @@ services:
     volumes:
       - mysql-data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/custom.cnf
     networks:
       - vevui-network
     healthcheck:
@@ -159,6 +161,8 @@ services:
       DB_PASS: vevui123
       EUREKA_HOST: eureka-server
       JWT_SECRET: vevui-super-secret-key-for-jwt-authentication-2024-please-change-in-production
+      MAIL_USERNAME: nhanthach55555@gmail.com
+      MAIL_PASSWORD: cetkzxqfcqxdapgs
     depends_on:
       mysql:
         condition: service_healthy
@@ -257,6 +261,8 @@ services:
     environment:
       EUREKA_HOST: eureka-server
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      MAIL_USERNAME: nhanthach55555@gmail.com
+      MAIL_PASSWORD: cetkzxqfcqxdapgs
     depends_on:
       kafka:
         condition: service_healthy

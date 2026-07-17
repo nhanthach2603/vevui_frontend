@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   background: var(--gradient-hero);
-  overflow: hidden;
+  overflow: visible;
   padding-top: 72px;
 }
 
@@ -18,6 +18,8 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
 }
 
 .hero-wave {
